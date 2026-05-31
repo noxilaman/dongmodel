@@ -56,6 +56,31 @@ export const listWantedItemsQuerySchema = z.object({
   wantedListId: z.string().uuid().optional()
 });
 
+export const createModongGroupSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  note: z.string().trim().max(5000).optional()
+});
+
+export const updateModongGroupSchema = createModongGroupSchema
+  .partial()
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "At least one field is required"
+  });
+
+export const modongGroupMembershipSchema = z.object({
+  modongId: z.string().uuid()
+});
+
+export const createWantedListSchema = z.object({
+  name: z.string().trim().min(1).max(120)
+});
+
+export const updateWantedListSchema = createWantedListSchema
+  .partial()
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "At least one field is required"
+  });
+
 export const registerOwnerSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
   password: z.string().min(8).max(128),
@@ -80,5 +105,12 @@ export type ListModongQuery = z.infer<typeof listModongQuerySchema>;
 export type CreateWantedItemInput = z.infer<typeof createWantedItemSchema>;
 export type UpdateWantedItemInput = z.infer<typeof updateWantedItemSchema>;
 export type ListWantedItemsQuery = z.infer<typeof listWantedItemsQuerySchema>;
+export type CreateModongGroupInput = z.infer<typeof createModongGroupSchema>;
+export type UpdateModongGroupInput = z.infer<typeof updateModongGroupSchema>;
+export type ModongGroupMembershipInput = z.infer<
+  typeof modongGroupMembershipSchema
+>;
+export type CreateWantedListInput = z.infer<typeof createWantedListSchema>;
+export type UpdateWantedListInput = z.infer<typeof updateWantedListSchema>;
 export type RegisterOwnerInput = z.infer<typeof registerOwnerSchema>;
 export type LoginOwnerInput = z.infer<typeof loginOwnerSchema>;

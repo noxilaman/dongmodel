@@ -3,7 +3,10 @@ import {
   createModongSchema,
   createWantedItemSchema,
   loginOwnerSchema,
-  registerOwnerSchema
+  modongGroupMembershipSchema,
+  registerOwnerSchema,
+  createModongGroupSchema,
+  createWantedListSchema
 } from "./schemas.js";
 
 describe("shared schemas", () => {
@@ -86,5 +89,33 @@ describe("shared schemas", () => {
     });
 
     expect(result.email).toBe("noxil@example.com");
+  });
+
+  it("normalizes Modong Group input", () => {
+    const result = createModongGroupSchema.parse({
+      name: " กองสุลต่าน ",
+      note: " เอาไว้อวด "
+    });
+
+    expect(result).toEqual({
+      name: "กองสุลต่าน",
+      note: "เอาไว้อวด"
+    });
+  });
+
+  it("validates Modong Group membership", () => {
+    const result = modongGroupMembershipSchema.parse({
+      modongId: "11111111-1111-4111-8111-111111111111"
+    });
+
+    expect(result.modongId).toBe("11111111-1111-4111-8111-111111111111");
+  });
+
+  it("normalizes Wanted List input", () => {
+    const result = createWantedListSchema.parse({
+      name: " ตามหา UC "
+    });
+
+    expect(result.name).toBe("ตามหา UC");
   });
 });

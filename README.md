@@ -80,6 +80,28 @@ Current photo foundation:
 
 All photo endpoints require the Owner session cookie. Uploads use multipart form data with a `file` field. Main Photo and Wanted Reference Photo are replaced when uploaded again. Additional Photos are limited to five per Modong.
 
+## API Organization Endpoints
+
+Current Modong Group foundation:
+
+- `GET /api/v1/modong-groups`
+- `GET /api/v1/modong-groups/:id`
+- `POST /api/v1/modong-groups`
+- `PATCH /api/v1/modong-groups/:id`
+- `DELETE /api/v1/modong-groups/:id`
+- `POST /api/v1/modong-groups/:id/items`
+- `DELETE /api/v1/modong-groups/:id/items/:modongId`
+
+Current Wanted List foundation:
+
+- `GET /api/v1/wanted-lists`
+- `GET /api/v1/wanted-lists/:id`
+- `POST /api/v1/wanted-lists`
+- `PATCH /api/v1/wanted-lists/:id`
+- `DELETE /api/v1/wanted-lists/:id`
+
+Modong may belong to multiple Modong Groups. Wanted Items belong to one Wanted List through their `wantedListId` field.
+
 ## Development Checks
 
 Run these before considering a change complete:

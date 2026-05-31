@@ -9,6 +9,8 @@ Dongmodel is a Thai-first web app for collectors to record, organize, and share 
 - **Modong Group**: an Owner-defined group for Modong. A Modong may belong to multiple groups.
 - **Wanted List**: an Owner-defined list for Wanted Items. A Wanted Item may belong to one Wanted List or no list.
 
+The first organization API slice supports Modong Group CRUD, adding and removing Modong from groups, and Wanted List CRUD.
+
 ## Modong
 
 Required to create:

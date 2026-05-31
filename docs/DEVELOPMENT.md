@@ -25,6 +25,7 @@ For each new backend module:
 - Add controller tests when request validation, auth behavior, or response shape is important.
 - Mock Prisma in unit tests.
 - Use a real test database only for integration tests.
+- Keep Owner-only fields, especially price summaries and private notes, out of public share and gallery surfaces.
 
 For each shared schema:
 

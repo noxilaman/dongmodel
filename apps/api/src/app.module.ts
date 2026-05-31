@@ -8,6 +8,7 @@ import { OrganizeModule } from "./organize/organize.module";
 import { PhotoModule } from "./photo/photo.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { ShareModule } from "./share/share.module";
+import { SummaryModule } from "./summary/summary.module";
 import { WantedModule } from "./wanted/wanted.module";
 
 @Module({
@@ -21,7 +22,8 @@ import { WantedModule } from "./wanted/wanted.module";
     PhotoModule,
     ShareModule,
     GalleryModule,
-    AdminModule
+    AdminModule,
+    SummaryModule
   ]
 })
 export class AppModule {}

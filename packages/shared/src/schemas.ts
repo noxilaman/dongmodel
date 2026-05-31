@@ -81,6 +81,22 @@ export const updateWantedListSchema = createWantedListSchema
     message: "At least one field is required"
   });
 
+export const valueSummaryEntrySchema = z.object({
+  currency: z.string().trim().length(3),
+  amount: z.string()
+});
+
+export const ownerSummarySchema = z.object({
+  modongTotal: z.number().int().nonnegative(),
+  wantedTotal: z.number().int().nonnegative(),
+  modongByState: z.record(modongStateSchema, z.number().int().nonnegative()),
+  wantedByState: z.record(wantedStateSchema, z.number().int().nonnegative()),
+  privateValueSummary: z.object({
+    purchase: z.array(valueSummaryEntrySchema),
+    release: z.array(valueSummaryEntrySchema)
+  })
+});
+
 export const registerOwnerSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
   password: z.string().min(8).max(128),
@@ -112,5 +128,7 @@ export type ModongGroupMembershipInput = z.infer<
 >;
 export type CreateWantedListInput = z.infer<typeof createWantedListSchema>;
 export type UpdateWantedListInput = z.infer<typeof updateWantedListSchema>;
+export type ValueSummaryEntry = z.infer<typeof valueSummaryEntrySchema>;
+export type OwnerSummary = z.infer<typeof ownerSummarySchema>;
 export type RegisterOwnerInput = z.infer<typeof registerOwnerSchema>;
 export type LoginOwnerInput = z.infer<typeof loginOwnerSchema>;

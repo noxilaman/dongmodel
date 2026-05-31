@@ -133,6 +133,23 @@ Wanted Search supports name search and filters by:
 
 Owner Summary is private and shows counts of Modong by state and counts of Wanted Items. Private Value Summary is Owner-only and never appears in share links or galleries.
 
+The first Owner Summary API slice supports:
+
+- Total Modong count
+- Total Wanted Item count
+- Zero-filled Modong counts for every Modong State
+- Zero-filled Wanted Item counts for every Wanted State
+- Owner-only Purchase Price and Release Price totals grouped by currency
+
+The first frontend dashboard slice supports:
+
+- Login and Register with email/password
+- Session check on page load
+- Logout
+- Owner Summary display for logged-in Owners
+- Creating a first Modong from the dashboard with name, state, release year, acquisition year, purchase price, storage note, and private note
+- Empty state for visitors who have not logged in
+
 ## Out Of Scope For MVP
 
 - In-app friends, follows, feeds, comments, or chat

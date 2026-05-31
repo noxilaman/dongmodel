@@ -33,6 +33,8 @@ To preview only the frontend shell:
 pnpm --filter @dongmodel/web dev
 ```
 
+The frontend provides login, register, logout, session check, a private Owner Summary dashboard, a Modong create form, and a Wanted Item create/list/update-state/delete panel — all calling the API through `NEXT_PUBLIC_API_BASE_URL`.
+
 ## API Auth Endpoints
 
 Current auth foundation:
@@ -101,6 +103,14 @@ Current Wanted List foundation:
 - `DELETE /api/v1/wanted-lists/:id`
 
 Modong may belong to multiple Modong Groups. Wanted Items belong to one Wanted List through their `wantedListId` field.
+
+## API Summary Endpoint
+
+Current private Owner Summary foundation:
+
+- `GET /api/v1/owner-summary`
+
+The summary endpoint requires the Owner session cookie. It returns Modong counts by state, Wanted Item counts by state, total counts, and Owner-only purchase/release value summaries grouped by currency. Value summaries are private API data and are not exposed by public share links or gallery surfaces.
 
 ## Development Checks
 

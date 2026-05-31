@@ -4,6 +4,7 @@ import {
   createWantedItemSchema,
   loginOwnerSchema,
   modongGroupMembershipSchema,
+  ownerSummarySchema,
   registerOwnerSchema,
   createModongGroupSchema,
   createWantedListSchema
@@ -117,5 +118,34 @@ describe("shared schemas", () => {
     });
 
     expect(result.name).toBe("ตามหา UC");
+  });
+
+  it("validates private owner summary shape", () => {
+    const result = ownerSummarySchema.parse({
+      modongTotal: 1,
+      wantedTotal: 1,
+      modongByState: {
+        โมดอง: 1,
+        "ต่อไม่เสร็จ": 0,
+        ต่อแล้ว: 0,
+        ปล่อยไปแล้ว: 0,
+        หลุมดำ: 0
+      },
+      wantedByState: {
+        กำลังงมเข็ม: 1,
+        "mission complete": 0,
+        ห่างกันซักพัก: 0,
+        เราขาดกัน: 0
+      },
+      privateValueSummary: {
+        purchase: [{ currency: "THB", amount: "2500.00" }],
+        release: []
+      }
+    });
+
+    expect(result.privateValueSummary.purchase[0]).toEqual({
+      currency: "THB",
+      amount: "2500.00"
+    });
   });
 });

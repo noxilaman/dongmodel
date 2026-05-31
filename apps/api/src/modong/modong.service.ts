@@ -35,7 +35,7 @@ export class ModongService {
           : {})
       },
       orderBy: { createdAt: "desc" },
-      include: { collectibleKind: true }
+      include: modongIncludes
     });
 
     return items.map(toModongDto);
@@ -44,7 +44,7 @@ export class ModongService {
   async get(ownerId: string, id: string) {
     const modong = await this.prisma.modong.findFirst({
       where: { id, ownerId },
-      include: { collectibleKind: true }
+      include: modongIncludes
     });
 
     if (!modong) {
@@ -60,7 +60,7 @@ export class ModongService {
         ownerId,
         ...toModongCreateData(input)
       },
-      include: { collectibleKind: true }
+      include: modongIncludes
     });
 
     return toModongDto(modong);
@@ -72,7 +72,7 @@ export class ModongService {
     const modong = await this.prisma.modong.update({
       where: { id },
       data: toModongUpdateData(input),
-      include: { collectibleKind: true }
+      include: modongIncludes
     });
 
     return toModongDto(modong);
@@ -152,6 +152,14 @@ function toModongUpdateData(input: UpdateModongInput) {
   };
 }
 
+const modongIncludes = {
+  collectibleKind: true,
+  photos: {
+    select: { id: true, storageKey: true, kind: true, sortOrder: true },
+    orderBy: { sortOrder: "asc" as const }
+  }
+} as const;
+
 type ModongWithKind = {
   id: string;
   ownerId: string;
@@ -172,6 +180,7 @@ type ModongWithKind = {
   createdAt: Date;
   updatedAt: Date;
   collectibleKind: { id: string; name: string } | null;
+  photos: Array<{ id: string; storageKey: string; kind: string; sortOrder: number }>;
 };
 
 function toModongDto(modong: ModongWithKind) {
@@ -197,6 +206,12 @@ function toModongDto(modong: ModongWithKind) {
     releaseAmount: modong.releaseAmount?.toString() ?? null,
     releaseCurrency: modong.releaseCurrency,
     galleryVisible: modong.galleryVisible,
+    mainPhoto: modong.photos.find((p) => p.kind === "MODONG_MAIN")
+      ? { id: modong.photos.find((p) => p.kind === "MODONG_MAIN")!.id, url: `/uploads/${modong.photos.find((p) => p.kind === "MODONG_MAIN")!.storageKey}` }
+      : null,
+    additionalPhotos: modong.photos
+      .filter((p) => p.kind === "MODONG_ADDITIONAL")
+      .map((p) => ({ id: p.id, url: `/uploads/${p.storageKey}` })),
     createdAt: modong.createdAt.toISOString(),
     updatedAt: modong.updatedAt.toISOString()
   };

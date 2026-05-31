@@ -27,7 +27,8 @@ const prismaWanted = {
     id: "list-1",
     name: "ตามหา UC"
   },
-  acquiredModong: null
+  acquiredModong: null,
+  photos: []
 };
 
 function createPrismaMock() {
@@ -86,7 +87,9 @@ describe("WantedService", () => {
       collectibleKind: { id: "kind-1", name: "Gunpla" },
       wantedList: { id: "list-1", name: "ตามหา UC" },
       acquiredModong: null,
+      wantedListId: "list-1",
       wantedNote: "อย่าเกินงบ",
+      referencePhoto: null,
       createdAt: "2026-05-31T00:00:00.000Z",
       updatedAt: "2026-05-31T00:00:00.000Z"
     });

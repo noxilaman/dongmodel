@@ -192,6 +192,7 @@ function toPhotoDto(photo: PhotoRecord) {
     wantedItemId: photo.wantedItemId,
     kind: photo.kind,
     storageKey: photo.storageKey,
+    url: `/uploads/${photo.storageKey}`,
     originalName: photo.originalName,
     mimeType: photo.mimeType,
     sizeBytes: photo.sizeBytes,

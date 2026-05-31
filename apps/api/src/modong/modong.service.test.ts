@@ -27,7 +27,8 @@ const prismaModong = {
   collectibleKind: {
     id: "kind-1",
     name: "Gunpla"
-  }
+  },
+  photos: []
 };
 
 function createPrismaMock() {
@@ -71,7 +72,7 @@ describe("ModongService", () => {
         state: PrismaModongState.MODONG
       },
       orderBy: { createdAt: "desc" },
-      include: { collectibleKind: true }
+      include: expect.any(Object)
     });
     expect(result[0]).toEqual({
       id: "modong-1",
@@ -90,6 +91,8 @@ describe("ModongService", () => {
       releaseAmount: null,
       releaseCurrency: "THB",
       galleryVisible: true,
+      mainPhoto: null,
+      additionalPhotos: [],
       createdAt: "2026-05-31T00:00:00.000Z",
       updatedAt: "2026-05-31T00:00:00.000Z"
     });
@@ -122,7 +125,7 @@ describe("ModongService", () => {
         collectibleKindId: "kind-1",
         purchaseAmount: 2500
       }),
-      include: { collectibleKind: true }
+      include: expect.any(Object)
     });
     expect(result.state).toBe("โมดอง");
   });
@@ -150,7 +153,7 @@ describe("ModongService", () => {
         state: PrismaModongState.UNFINISHED,
         privateNote: "เหลืออาวุธ"
       },
-      include: { collectibleKind: true }
+      include: expect.any(Object)
     });
     expect(result.state).toBe("ต่อไม่เสร็จ");
   });

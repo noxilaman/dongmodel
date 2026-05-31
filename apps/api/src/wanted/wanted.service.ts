@@ -220,6 +220,11 @@ const wantedIncludes = {
       id: true,
       name: true
     }
+  },
+  photos: {
+    where: { kind: "WANTED_REFERENCE" as const },
+    take: 1,
+    select: { id: true, storageKey: true }
   }
 } as const;
 
@@ -237,6 +242,7 @@ type WantedWithIncludes = {
   collectibleKind: { id: string; name: string } | null;
   wantedList: { id: string; name: string } | null;
   acquiredModong: { id: string; name: string } | null;
+  photos: Array<{ id: string; storageKey: string }>;
 };
 
 function toWantedDto(item: WantedWithIncludes) {
@@ -263,7 +269,11 @@ function toWantedDto(item: WantedWithIncludes) {
           name: item.acquiredModong.name
         }
       : null,
+    wantedListId: item.wantedListId,
     wantedNote: item.wantedNote,
+    referencePhoto: item.photos[0]
+      ? { id: item.photos[0].id, url: `/uploads/${item.photos[0].storageKey}` }
+      : null,
     createdAt: item.createdAt.toISOString(),
     updatedAt: item.updatedAt.toISOString()
   };

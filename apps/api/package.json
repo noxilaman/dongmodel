@@ -8,6 +8,7 @@
     "build": "nest build",
     "start": "node dist/main.js",
     "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
@@ -35,6 +36,7 @@
     "@types/multer": "^1.4.12",
     "@types/node": "^22.15.24",
     "prisma": "^6.8.2",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
   }
 }

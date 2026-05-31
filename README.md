@@ -32,3 +32,54 @@ To preview only the frontend shell:
 ```bash
 pnpm --filter @dongmodel/web dev
 ```
+
+## API Auth Endpoints
+
+Current auth foundation:
+
+- `GET /api/v1/auth/health`
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/logout`
+- `GET /api/v1/auth/me`
+
+Auth uses an HTTP-only `dongmodel_session` cookie. `GET /api/v1/auth/me` is protected by the shared auth guard used by future Owner-only endpoints.
+
+## API Modong Endpoints
+
+Current Modong foundation:
+
+- `GET /api/v1/modong`
+- `GET /api/v1/modong/:id`
+- `POST /api/v1/modong`
+- `PATCH /api/v1/modong/:id`
+- `DELETE /api/v1/modong/:id`
+
+All Modong endpoints require the Owner session cookie and only operate on the current Owner's Modong.
+
+## API Wanted Endpoints
+
+Current Wanted Item foundation:
+
+- `GET /api/v1/wanted`
+- `GET /api/v1/wanted/:id`
+- `POST /api/v1/wanted`
+- `PATCH /api/v1/wanted/:id`
+- `DELETE /api/v1/wanted/:id`
+
+All Wanted endpoints require the Owner session cookie and only operate on the current Owner's Wanted Items. Creating or updating a Wanted Item to `mission complete` creates a Modong immediately with Modong State `โมดอง`.
+
+## Development Checks
+
+Run these before considering a change complete:
+
+```bash
+pnpm test
+pnpm typecheck
+pnpm lint
+pnpm build
+```
+
+New domain or service behavior should include unit tests. Database-backed behavior should use separate integration tests when a test database is introduced.
+
+See [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) for the full workflow.

@@ -7,18 +7,21 @@
     "dev": "pnpm --filter @dongmodel/shared build && pnpm --parallel --filter @dongmodel/web --filter @dongmodel/api dev",
     "build": "pnpm -r build",
     "lint": "pnpm --filter @dongmodel/shared build && pnpm -r lint",
+    "test": "pnpm --filter @dongmodel/shared build && pnpm -r test",
     "typecheck": "pnpm --filter @dongmodel/shared build && pnpm -r typecheck",
     "format": "prettier --write ."
   },
   "devDependencies": {
     "prettier": "^3.5.3",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
       "@nestjs/core",
       "@prisma/client",
       "@prisma/engines",
+      "esbuild",
       "prisma",
       "sharp",
       "unrs-resolver"

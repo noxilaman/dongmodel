@@ -1,0 +1,241 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum OwnerRole {
+  OWNER
+  ADMIN
+}
+
+enum ModongState {
+  MODONG      @map("โมดอง")
+  UNFINISHED  @map("ต่อไม่เสร็จ")
+  COMPLETED   @map("ต่อแล้ว")
+  RELEASED    @map("ปล่อยไปแล้ว")
+  BLACK_HOLE  @map("หลุมดำ")
+}
+
+enum WantedState {
+  NEEDLE_HUNTING  @map("กำลังงมเข็ม")
+  MISSION_COMPLETE @map("mission complete")
+  TAKING_A_BREAK  @map("ห่างกันซักพัก")
+  BROKEN_UP       @map("เราขาดกัน")
+}
+
+enum ShareKind {
+  MODONG
+  MODONG_GROUP
+  WANTED
+}
+
+enum PhotoKind {
+  MODONG_MAIN
+  MODONG_ADDITIONAL
+  WANTED_REFERENCE
+}
+
+model Owner {
+  id           String      @id @default(uuid())
+  email        String      @unique
+  passwordHash String?
+  googleSub    String?     @unique
+  displayName  String
+  handle       String      @unique
+  role         OwnerRole   @default(OWNER)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  modong       Modong[]
+  wantedItems  WantedItem[]
+  groups       ModongGroup[]
+  wantedLists  WantedList[]
+  shares       Share[]
+  sessions     Session[]
+  photos       Photo[]
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  ownerId   String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  owner Owner @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+}
+
+model CollectibleKind {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  modong      Modong[]
+  wantedItems WantedItem[]
+}
+
+model Modong {
+  id                 String       @id @default(uuid())
+  ownerId            String
+  collectibleKindId  String?
+  name               String
+  state              ModongState  @default(MODONG)
+  releaseYear        Int?
+  acquisitionYear    Int?
+  releasedAwayYear   Int?
+  acquisitionSource  String?      @db.Text
+  storageNote        String?      @db.Text
+  privateNote        String?      @db.Text
+  purchaseAmount     Decimal?     @db.Decimal(12, 2)
+  purchaseCurrency   String       @default("THB")
+  releaseAmount      Decimal?     @db.Decimal(12, 2)
+  releaseCurrency    String       @default("THB")
+  galleryVisible     Boolean      @default(true)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  owner              Owner             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  collectibleKind    CollectibleKind?  @relation(fields: [collectibleKindId], references: [id], onDelete: SetNull)
+  photos             Photo[]
+  groupLinks         ModongGroupItem[]
+  shares             Share[]
+  featuredInShares   ShareFeaturedModong[]
+  acquiredFromWanted WantedItem?       @relation("AcquiredWanted")
+
+  @@index([ownerId, state])
+  @@index([ownerId, name])
+  @@index([collectibleKindId])
+}
+
+model WantedItem {
+  id                   String       @id @default(uuid())
+  ownerId              String
+  collectibleKindId    String?
+  wantedListId         String?
+  acquiredModongId     String?      @unique
+  name                 String
+  state                WantedState  @default(NEEDLE_HUNTING)
+  wantedNote           String?      @db.Text
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  owner                Owner            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  collectibleKind      CollectibleKind? @relation(fields: [collectibleKindId], references: [id], onDelete: SetNull)
+  wantedList           WantedList?      @relation(fields: [wantedListId], references: [id], onDelete: SetNull)
+  acquiredModong       Modong?          @relation("AcquiredWanted", fields: [acquiredModongId], references: [id], onDelete: SetNull)
+  photos               Photo[]
+  shares               Share[]
+
+  @@index([ownerId, state])
+  @@index([ownerId, name])
+  @@index([wantedListId])
+  @@index([collectibleKindId])
+}
+
+model ModongGroup {
+  id        String            @id @default(uuid())
+  ownerId   String
+  name      String
+  note      String?           @db.Text
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  owner     Owner             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  items     ModongGroupItem[]
+  shares    Share[]
+
+  @@index([ownerId, name])
+}
+
+model ModongGroupItem {
+  modongId String
+  groupId  String
+  addedAt  DateTime @default(now())
+
+  modong   Modong      @relation(fields: [modongId], references: [id], onDelete: Cascade)
+  group    ModongGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([modongId, groupId])
+  @@index([groupId])
+}
+
+model WantedList {
+  id        String       @id @default(uuid())
+  ownerId   String
+  name      String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  owner     Owner        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  items     WantedItem[]
+
+  @@index([ownerId, name])
+}
+
+model Photo {
+  id           String      @id @default(uuid())
+  ownerId      String
+  modongId     String?
+  wantedItemId String?
+  kind         PhotoKind
+  storageKey   String
+  originalName String?
+  mimeType     String
+  sizeBytes    Int
+  sortOrder    Int         @default(0)
+  createdAt    DateTime    @default(now())
+
+  modong       Modong?     @relation(fields: [modongId], references: [id], onDelete: Cascade)
+  wantedItem   WantedItem? @relation(fields: [wantedItemId], references: [id], onDelete: Cascade)
+  owner        Owner       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+  @@index([modongId, kind])
+  @@index([wantedItemId, kind])
+}
+
+model Share {
+  id             String       @id @default(uuid())
+  ownerId        String
+  tokenHash      String       @unique
+  kind           ShareKind
+  modongId       String?
+  modongGroupId  String?
+  wantedItemId   String?
+  revokedAt      DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  owner          Owner        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  modong         Modong?      @relation(fields: [modongId], references: [id], onDelete: Cascade)
+  modongGroup    ModongGroup? @relation(fields: [modongGroupId], references: [id], onDelete: Cascade)
+  wantedItem     WantedItem?  @relation(fields: [wantedItemId], references: [id], onDelete: Cascade)
+
+  featuredItems  ShareFeaturedModong[]
+
+  @@index([ownerId])
+  @@index([kind])
+  @@index([modongId])
+  @@index([modongGroupId])
+  @@index([wantedItemId])
+}
+
+model ShareFeaturedModong {
+  shareId  String
+  modongId String
+  position Int
+
+  share    Share  @relation(fields: [shareId], references: [id], onDelete: Cascade)
+  modong   Modong @relation(fields: [modongId], references: [id], onDelete: Cascade)
+
+  @@id([shareId, modongId])
+  @@index([modongId])
+}

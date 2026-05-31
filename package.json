@@ -1,0 +1,27 @@
+{
+  "name": "dongmodel",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@11.1.2",
+  "scripts": {
+    "dev": "pnpm --filter @dongmodel/shared build && pnpm --parallel --filter @dongmodel/web --filter @dongmodel/api dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm --filter @dongmodel/shared build && pnpm -r lint",
+    "typecheck": "pnpm --filter @dongmodel/shared build && pnpm -r typecheck",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "sharp",
+      "unrs-resolver"
+    ]
+  }
+}

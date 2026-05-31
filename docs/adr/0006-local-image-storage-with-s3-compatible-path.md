@@ -1,0 +1,3 @@
+# Local image storage with an S3-compatible path
+
+Dongmodel stores uploaded images on local storage in the first version to keep development and early operation simple. Image uploads go through the backend so ownership, image-count rules, and photo types can be enforced consistently. Image handling must still be configured behind a storage boundary so the system can move to S3-compatible object storage or presigned uploads later without changing Modong, Wanted Item, sharing, or gallery domain behavior. This avoids paying object-storage complexity before it is needed while keeping the migration path visible.

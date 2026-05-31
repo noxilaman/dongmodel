@@ -105,6 +105,8 @@ Make sure the API process can read and write that directory.
 
 Back up this directory together with the MySQL database. Modong photos, additional photos, and wanted reference photos are product data.
 
+The API process writes uploaded files through `LOCAL_UPLOAD_DIR`. Make sure this path is outside the application release directory so deploys do not remove uploaded files.
+
 The storage boundary should later allow switching `IMAGE_STORAGE_DRIVER` to an S3-compatible driver without changing the domain model.
 
 ## Run

@@ -33,6 +33,8 @@ Optional details:
 
 The first API slice supports Owner-scoped create, list, detail, update, and delete for Modong non-photo fields. Photo upload and group membership are separate slices.
 
+The photo API supports replacing one Main Photo and adding up to five Additional Photos per Modong.
+
 Modong states:
 
 - โมดอง
@@ -65,6 +67,8 @@ Wanted states:
 When a Wanted Item becomes `mission complete`, it immediately enters Modong with Modong State "โมดอง".
 
 The first API slice supports Owner-scoped create, list, detail, update, and delete for Wanted Items. Setting a Wanted Item to `mission complete` creates the corresponding Modong immediately.
+
+The photo API supports replacing one Wanted Reference Photo per Wanted Item.
 
 ## Sharing
 

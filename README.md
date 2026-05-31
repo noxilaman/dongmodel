@@ -69,6 +69,17 @@ Current Wanted Item foundation:
 
 All Wanted endpoints require the Owner session cookie and only operate on the current Owner's Wanted Items. Creating or updating a Wanted Item to `mission complete` creates a Modong immediately with Modong State `โมดอง`.
 
+## API Photo Endpoints
+
+Current photo foundation:
+
+- `POST /api/v1/modong/:id/photos/main`
+- `POST /api/v1/modong/:id/photos/additional`
+- `POST /api/v1/wanted/:id/photos/reference`
+- `DELETE /api/v1/photos/:id`
+
+All photo endpoints require the Owner session cookie. Uploads use multipart form data with a `file` field. Main Photo and Wanted Reference Photo are replaced when uploaded again. Additional Photos are limited to five per Modong.
+
 ## Development Checks
 
 Run these before considering a change complete:

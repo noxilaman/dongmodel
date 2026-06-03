@@ -3,12 +3,18 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
+  BookmarkCheck,
   Boxes,
   ChevronDown,
+  Crosshair,
+  FolderOpen,
   Image,
   KeyRound,
+  LayoutDashboard,
   Loader2,
   LogOut,
+  Menu,
+  Package2,
   Plus,
   Search,
   ShieldCheck,
@@ -16,6 +22,7 @@ import {
   Trash2,
   X
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import {
   modongStates,
@@ -85,13 +92,14 @@ const dashboardSections: Array<{
   href: string;
   label: string;
   section: DashboardSection;
+  Icon: LucideIcon;
 }> = [
-  { href: "/", label: "ภาพรวม", section: "overview" },
-  { href: "/modong", label: "โมดอง", section: "modong" },
-  { href: "/wanted", label: "ของที่ตามหา", section: "wanted" },
-  { href: "/groups", label: "กลุ่มโมดอง", section: "groups" },
-  { href: "/wanted-lists", label: "รายการตามหา", section: "wanted-lists" },
-  { href: "/admin", label: "Admin", section: "admin" }
+  { href: "/", label: "ภาพรวม", section: "overview", Icon: LayoutDashboard },
+  { href: "/modong", label: "โมดอง", section: "modong", Icon: Package2 },
+  { href: "/wanted", label: "ของที่ตามหา", section: "wanted", Icon: Crosshair },
+  { href: "/groups", label: "กลุ่มโมดอง", section: "groups", Icon: FolderOpen },
+  { href: "/wanted-lists", label: "รายการตามหา", section: "wanted-lists", Icon: BookmarkCheck },
+  { href: "/admin", label: "Admin", section: "admin", Icon: ShieldCheck },
 ];
 
 const sectionTitles: Record<DashboardSection, string> = {
@@ -123,7 +131,6 @@ export function DashboardClient({
   const [modongRefreshKey, setModongRefreshKey] = useState(0);
   const [wantedForm, setWantedForm] = useState<WantedFormState>(emptyWantedForm);
   const [wantedItems, setWantedItems] = useState<WantedItem[]>([]);
-  // After creation, hold the new item's id + name so user can upload a photo before dismissing.
   const [pendingModongPhoto, setPendingModongPhoto] = useState<{ id: string; name: string } | null>(null);
   const [pendingWantedPhoto, setPendingWantedPhoto] = useState<{ id: string; name: string } | null>(null);
   const [owner, setOwner] = useState<Owner | null>(null);
@@ -131,6 +138,8 @@ export function DashboardClient({
   const [status, setStatus] = useState("กำลังตรวจ session");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -141,6 +150,7 @@ export function DashboardClient({
 
       setOwner(currentOwner);
       setStatus(currentOwner ? "โหลด dashboard แล้ว" : "เข้าสู่ โมดองทันที");
+      setLoading(false);
 
       if (currentOwner) {
         await Promise.all([loadSummary(), loadWantedItems()]);
@@ -167,7 +177,7 @@ export function DashboardClient({
     try {
       setWantedItems(await listWantedItems());
     } catch {
-      // non-critical — summary already shows wanted counts
+      // non-critical
     }
   }
 
@@ -282,7 +292,6 @@ export function DashboardClient({
   async function handleWantedStateChange(id: string, state: WantedItem["state"]) {
     setBusy(true);
     setError(null);
-
     try {
       await updateWantedItem(id, { state });
       await Promise.all([loadSummary(), loadWantedItems()]);
@@ -296,7 +305,6 @@ export function DashboardClient({
   async function handleDeleteWanted(id: string) {
     setBusy(true);
     setError(null);
-
     try {
       await deleteWantedItem(id);
       await Promise.all([loadSummary(), loadWantedItems()]);
@@ -310,7 +318,6 @@ export function DashboardClient({
   async function handleLogout() {
     setBusy(true);
     setError(null);
-
     try {
       await logoutOwner();
       setOwner(null);
@@ -329,75 +336,211 @@ export function DashboardClient({
     [summary]
   );
 
-  return (
-    <main className="min-h-screen bg-background">
-      <section className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-5 sm:px-6 lg:grid-cols-[340px_1fr]">
-        <aside className="flex flex-col gap-4">
-          <div className="rounded-lg border border-border bg-white p-5 shadow-sm">
-            <div className="flex items-center gap-3">
-              <img
-                alt="Dongmodel"
-                className="h-14 w-14 rounded-md object-contain"
-                src="/brand/logo.png"
-              />
-              <div>
-                <p className="text-sm font-semibold text-muted-foreground">
-                  Dongmodel
-                </p>
-                <h1 className="text-2xl font-black">โมดอง</h1>
-              </div>
-            </div>
-            <p className="mt-4 text-sm leading-6 text-muted-foreground">
-              {owner
-                ? `${owner.displayName} @${owner.handle}`
-                : "จัดของที่มี ของที่ตามหา และแชร์ความสุลต่านแบบไม่โชว์ราคา"}
-            </p>
-          </div>
+  // Initial session check
+  if (loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2
+          aria-label="กำลังโหลด"
+          className="h-6 w-6 animate-spin text-muted-foreground"
+        />
+      </main>
+    );
+  }
 
-          {owner ? (
-            <OwnerPanel
-              activeSection={section}
-              busy={busy}
-              owner={owner}
-              onLogout={handleLogout}
-              onRefresh={loadSummary}
+  // Not authenticated
+  if (!owner) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background p-4">
+        <div className="w-full max-w-[400px]">
+          <div className="mb-8 flex items-center gap-3">
+            <img
+              alt="Dongmodel"
+              className="h-12 w-12 rounded-lg object-contain"
+              src="/brand/logo.png"
             />
-          ) : (
-            <AuthPanel
-              authMode={authMode}
-              busy={busy}
-              form={form}
-              onFormChange={setForm}
-              onModeChange={setAuthMode}
-              onSubmit={submitAuth}
-            />
-          )}
-        </aside>
-
-        <section className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2 border-b border-border pb-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p aria-live="polite" className="text-sm font-bold text-primary">{status}</p>
-              <h2 className="text-3xl font-black leading-tight sm:text-4xl">
-                {sectionTitles[section]}
-              </h2>
-            </div>
-            <div className="inline-flex w-fit items-center gap-2 rounded-md border border-border bg-white px-3 py-2 text-sm font-semibold">
-              <ShieldCheck className="h-4 w-4 text-accent" aria-hidden />
-              Owner-only
+              <p className="text-xs font-semibold text-muted-foreground">
+                Dongmodel
+              </p>
+              <h1 className="text-2xl font-black">โมดอง</h1>
             </div>
           </div>
-
+          <AuthPanel
+            authMode={authMode}
+            busy={busy}
+            form={form}
+            onFormChange={setForm}
+            onModeChange={setAuthMode}
+            onSubmit={submitAuth}
+          />
           {error ? (
             <div
               aria-live="assertive"
-              className="animate-fade-in rounded-lg border border-primary bg-white p-4 text-sm font-semibold text-primary"
+              className="animate-fade-in mt-3 rounded-lg border border-primary bg-white p-4 text-sm font-semibold text-primary"
               role="alert"
             >
               {error}
             </div>
           ) : null}
+          <p className="mt-8 text-center text-sm font-bold text-accent">
+            {publicPhrases.wantedShare}
+          </p>
+        </div>
+      </main>
+    );
+  }
 
+  // Authenticated — AdminHMD-style layout
+  const visibleSections = dashboardSections.filter(
+    (item) => item.section !== "admin" || owner.role === "ADMIN"
+  );
+
+  return (
+    <div className="flex h-screen overflow-hidden">
+      {/* Mobile backdrop */}
+      {sidebarOpen && (
+        <div
+          aria-hidden
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex w-[280px] flex-col bg-foreground text-white transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] lg:relative lg:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        {/* Brand */}
+        <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
+          <img
+            alt="Dongmodel"
+            className="h-9 w-9 flex-none rounded-md object-contain"
+            src="/brand/logo.png"
+          />
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-white/40">
+              Dongmodel
+            </p>
+            <p className="text-sm font-black leading-tight">โมดอง</p>
+          </div>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4">
+          <div className="space-y-0.5">
+            {visibleSections.map((item) => (
+              <Link
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors duration-150 ${
+                  section === item.section
+                    ? "bg-white/15 text-white"
+                    : "text-white/60 hover:bg-white/10 hover:text-white"
+                }`}
+                href={item.href}
+                key={item.section}
+                onClick={() => setSidebarOpen(false)}
+              >
+                <item.Icon aria-hidden className="h-4 w-4 flex-none" />
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </nav>
+
+        {/* User area */}
+        <div className="border-t border-white/10 px-4 py-4">
+          <div className="flex items-center gap-3">
+            <div className="grid h-8 w-8 flex-none place-items-center rounded-full bg-white/10 text-xs font-black text-white/60">
+              {owner.displayName?.[0]?.toUpperCase() ?? "O"}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-bold">{owner.displayName}</p>
+              <p className="truncate text-xs text-white/50">@{owner.handle}</p>
+            </div>
+          </div>
+          <div className="mt-3 flex gap-2">
+            <Link
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-bold text-white/70 transition-colors hover:bg-white/15 hover:text-white"
+              href={`/owners/${owner.handle}`}
+            >
+              Gallery
+            </Link>
+            <button
+              className="flex flex-none items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-bold text-white/70 transition-colors hover:bg-white/15 hover:text-white disabled:opacity-40"
+              disabled={busy}
+              onClick={handleLogout}
+              type="button"
+            >
+              {busy ? (
+                <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <LogOut aria-hidden className="h-3.5 w-3.5" />
+              )}
+              Logout
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Content area */}
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        {/* Topbar */}
+        <header className="flex h-14 flex-none items-center gap-4 border-b border-border bg-white px-4 sm:px-6">
+          <button
+            aria-label="เปิดปิด sidebar"
+            className="grid h-8 w-8 place-items-center rounded-md border border-border text-muted-foreground transition-colors hover:border-accent hover:text-accent lg:hidden"
+            onClick={() => setSidebarOpen((v) => !v)}
+            type="button"
+          >
+            <Menu aria-hidden className="h-4 w-4" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <p
+              aria-live="polite"
+              className="truncate text-[11px] font-bold text-primary"
+            >
+              {status}
+            </p>
+            <h1 className="truncate text-lg font-black leading-tight">
+              {sectionTitles[section]}
+            </h1>
+          </div>
+          <div className="flex items-center gap-2">
+            {owner.role === "ADMIN" && (
+              <span className="hidden items-center gap-1 rounded-md border border-border px-2 py-1.5 text-xs font-semibold sm:flex">
+                <ShieldCheck aria-hidden className="h-3.5 w-3.5 text-accent" />
+                Admin
+              </span>
+            )}
+            <button
+              aria-label="Refresh"
+              className="grid h-8 w-8 place-items-center rounded-md border border-border text-muted-foreground transition-colors hover:border-accent hover:text-accent disabled:opacity-40"
+              disabled={busy}
+              onClick={loadSummary}
+              type="button"
+            >
+              {busy ? (
+                <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles aria-hidden className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+        </header>
+
+        {/* Scrollable content */}
+        <main className="flex-1 overflow-y-auto bg-background p-4 sm:p-6">
+          {error ? (
+            <div
+              aria-live="assertive"
+              className="animate-fade-in mb-4 rounded-lg border border-primary bg-white p-4 text-sm font-semibold text-primary"
+              role="alert"
+            >
+              {error}
+            </div>
+          ) : null}
           {summary ? (
             <SummaryDashboard
               activeTotal={activeTotal}
@@ -429,11 +572,16 @@ export function DashboardClient({
               section={section}
             />
           ) : (
-            <EmptyDashboard />
+            <div className="flex items-center justify-center py-24 text-muted-foreground">
+              <Loader2
+                aria-label="กำลังโหลด"
+                className="h-6 w-6 animate-spin"
+              />
+            </div>
           )}
-        </section>
-      </section>
-    </main>
+        </main>
+      </div>
+    </div>
   );
 }
 
@@ -511,82 +659,14 @@ function AuthPanel({
         disabled={busy}
         type="submit"
       >
-        {busy
-          ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-          : <KeyRound className="h-4 w-4" aria-hidden />
-        }
+        {busy ? (
+          <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
+        ) : (
+          <KeyRound aria-hidden className="h-4 w-4" />
+        )}
         เข้าสู่ โมดองทันที
       </button>
     </form>
-  );
-}
-
-function OwnerPanel({
-  activeSection,
-  busy,
-  owner,
-  onLogout,
-  onRefresh
-}: {
-  activeSection: DashboardSection;
-  busy: boolean;
-  owner: Owner;
-  onLogout: () => void;
-  onRefresh: () => void;
-}) {
-  return (
-    <div className="rounded-lg border border-border bg-white p-5 shadow-sm">
-      <p className="text-sm font-semibold text-muted-foreground">Logged in</p>
-      <p className="mt-1 font-bold">{owner.email}</p>
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <button
-          className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-bold"
-          disabled={busy}
-          onClick={onRefresh}
-          type="button"
-        >
-          <Sparkles className="h-4 w-4" aria-hidden />
-          Refresh
-        </button>
-        <button
-          className="inline-flex items-center justify-center gap-2 rounded-md bg-foreground px-3 py-2 text-sm font-bold text-white"
-          disabled={busy}
-          onClick={onLogout}
-          type="button"
-        >
-          {busy
-            ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-            : <LogOut className="h-4 w-4" aria-hidden />
-          }
-          Logout
-        </button>
-      </div>
-      <div className="mt-2">
-        <Link
-          className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-bold transition-colors duration-150 hover:border-accent"
-          href={`/owners/${owner.handle}`}
-        >
-          ดู Gallery ของฉัน
-        </Link>
-      </div>
-      <nav className="mt-4 grid gap-2 border-t border-border pt-4">
-        {dashboardSections
-          .filter((item) => item.section !== "admin" || owner.role === "ADMIN")
-          .map((item) => (
-            <Link
-              className={`rounded-md border px-3 py-2 text-sm font-bold transition-colors duration-150 ${
-                activeSection === item.section
-                  ? "border-foreground bg-foreground text-white"
-                  : "border-border hover:border-accent"
-              }`}
-              href={item.href}
-              key={item.section}
-            >
-              {item.label}
-            </Link>
-          ))}
-      </nav>
-    </div>
   );
 }
 
@@ -649,7 +729,7 @@ function SummaryDashboard({
 }) {
   const modongStatePanel = (
     <StatePanel
-      icon={<Boxes className="h-5 w-5" aria-hidden />}
+      icon={<Boxes aria-hidden className="h-5 w-5" />}
       rows={modongStates.map((state) => ({
         label: state,
         value: getModongStateCount(summary, state)
@@ -660,7 +740,7 @@ function SummaryDashboard({
 
   const wantedStatePanel = (
     <StatePanel
-      icon={<Search className="h-5 w-5" aria-hidden />}
+      icon={<Search aria-hidden className="h-5 w-5" />}
       rows={wantedStates.map((state) => ({
         label: state,
         value: getWantedStateCount(summary, state)
@@ -698,15 +778,15 @@ function SummaryDashboard({
           <p className="text-sm font-bold text-muted-foreground">ของที่มีในมือ</p>
           <p className="mt-1 text-5xl font-black sm:text-6xl">{activeTotal}</p>
         </article>
-        <section className="grid gap-3 sm:grid-cols-2">
+        <section className="mt-4 grid gap-3 sm:grid-cols-2">
           <MetricCard label="โมดองทั้งหมด" value={summary.modongTotal} />
           <MetricCard label="ของที่ตามหา" value={summary.wantedTotal} />
         </section>
-        <section className="grid gap-4 lg:grid-cols-2">
+        <section className="mt-4 grid gap-4 lg:grid-cols-2">
           {modongStatePanel}
           {wantedStatePanel}
         </section>
-        {privateSummaryPanel}
+        <div className="mt-4">{privateSummaryPanel}</div>
       </>
     );
   }
@@ -715,11 +795,13 @@ function SummaryDashboard({
     return (
       <>
         {modongStatePanel}
-        <ModongListPanel
-          onCountChange={onSummaryRefresh}
-          refreshKey={modongRefreshKey}
-        />
-        <section className="rounded-lg border border-border bg-white p-5 shadow-sm">
+        <div className="mt-4">
+          <ModongListPanel
+            onCountChange={onSummaryRefresh}
+            refreshKey={modongRefreshKey}
+          />
+        </div>
+        <section className="mt-4 rounded-lg border border-border bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-lg font-black">เพิ่มโมดอง</h3>
@@ -734,9 +816,9 @@ function SummaryDashboard({
               type="button"
             >
               {isModongCreateOpen ? (
-                <X className="h-4 w-4" aria-hidden />
+                <X aria-hidden className="h-4 w-4" />
               ) : (
-                <Plus className="h-4 w-4" aria-hidden />
+                <Plus aria-hidden className="h-4 w-4" />
               )}
               {isModongCreateOpen ? "ปิดฟอร์ม" : "Add โมดอง"}
             </button>
@@ -780,16 +862,18 @@ function SummaryDashboard({
           {wantedStatePanel}
         </section>
         {wantedItems.length > 0 ? (
-          <WantedItemsPanel
-            busy={busy}
-            items={wantedItems}
-            onDelete={onWantedDelete}
-            onStateChange={onWantedStateChange}
-            onPhotoUpload={onWantedPhotoUpload}
-            onPhotoDelete={onDeletePhoto}
-          />
+          <div className="mt-4">
+            <WantedItemsPanel
+              busy={busy}
+              items={wantedItems}
+              onDelete={onWantedDelete}
+              onStateChange={onWantedStateChange}
+              onPhotoUpload={onWantedPhotoUpload}
+              onPhotoDelete={onDeletePhoto}
+            />
+          </div>
         ) : (
-          <section className="rounded-lg border border-border bg-white p-5 text-sm font-semibold text-muted-foreground shadow-sm">
+          <section className="mt-4 rounded-lg border border-border bg-white p-5 text-sm font-semibold text-muted-foreground shadow-sm">
             ยังไม่มีของที่ตามหา
           </section>
         )}
@@ -840,7 +924,7 @@ function CreateModongPanel({
     >
       <div className="flex items-center gap-2">
         <span className="grid h-9 w-9 place-items-center rounded-md bg-primary text-white">
-          <Plus className="h-5 w-5" aria-hidden />
+          <Plus aria-hidden className="h-5 w-5" />
         </span>
         <h3 className="text-lg font-black">เพิ่มโมดอง</h3>
       </div>
@@ -886,7 +970,7 @@ function CreateModongPanel({
               {mainPhotoFile ? mainPhotoFile.name : "เลือกรูปของจริงที่ถ่ายเอง"}
             </span>
             <span className="inline-flex w-fit items-center justify-center gap-2 rounded-md bg-foreground px-3 py-2 text-xs font-black text-white">
-              <Image className="h-4 w-4" aria-hidden />
+              <Image aria-hidden className="h-4 w-4" />
               เลือกรูป
             </span>
           </span>
@@ -1013,10 +1097,11 @@ function CreateModongPanel({
         disabled={busy || !form.name.trim()}
         type="submit"
       >
-        {busy
-          ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-          : <Plus className="h-4 w-4" aria-hidden />
-        }
+        {busy ? (
+          <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
+        ) : (
+          <Plus aria-hidden className="h-4 w-4" />
+        )}
         เพิ่มเข้าโมดอง
       </button>
     </form>
@@ -1041,7 +1126,7 @@ function CreateWantedPanel({
     >
       <div className="flex items-center gap-2">
         <span className="grid h-9 w-9 place-items-center rounded-md bg-accent text-white">
-          <Search className="h-5 w-5" aria-hidden />
+          <Search aria-hidden className="h-5 w-5" />
         </span>
         <h3 className="text-lg font-black">เพิ่มของที่ตามหา</h3>
       </div>
@@ -1093,10 +1178,11 @@ function CreateWantedPanel({
         disabled={busy || !form.name.trim()}
         type="submit"
       >
-        {busy
-          ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-          : <Plus className="h-4 w-4" aria-hidden />
-        }
+        {busy ? (
+          <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
+        ) : (
+          <Plus aria-hidden className="h-4 w-4" />
+        )}
         เพิ่มเข้าของที่ตามหา
       </button>
     </form>
@@ -1128,7 +1214,7 @@ function WantedItemsPanel({
     <section className="rounded-lg border border-border bg-white p-5 shadow-sm">
       <div className="flex items-center gap-2">
         <span className="grid h-9 w-9 place-items-center rounded-md bg-muted text-accent">
-          <Search className="h-5 w-5" aria-hidden />
+          <Search aria-hidden className="h-5 w-5" />
         </span>
         <h3 className="text-lg font-black">ของที่ตามหา ({items.length})</h3>
       </div>
@@ -1153,7 +1239,7 @@ function WantedItemsPanel({
                     onClick={() => onPhotoDelete(item.referencePhoto!.id)}
                     type="button"
                   >
-                    <X className="h-3 w-3" aria-hidden />
+                    <X aria-hidden className="h-3 w-3" />
                   </button>
                 </div>
               ) : (
@@ -1161,7 +1247,7 @@ function WantedItemsPanel({
                   aria-label={`อัพโหลดรูปอ้างอิง ${item.name}`}
                   className="flex h-12 w-12 flex-none cursor-pointer items-center justify-center rounded border-2 border-dashed border-border text-muted-foreground hover:border-accent hover:text-accent"
                 >
-                  <Image className="h-5 w-5" aria-hidden />
+                  <Image aria-hidden className="h-5 w-5" />
                   <input
                     accept="image/*"
                     className="sr-only"
@@ -1261,7 +1347,7 @@ function WantedItemsPanel({
                   onClick={() => setDeleteConfirmId(item.id)}
                   type="button"
                 >
-                  <Trash2 className="h-4 w-4" aria-hidden />
+                  <Trash2 aria-hidden className="h-4 w-4" />
                 </button>
               )}
             </div>
@@ -1288,7 +1374,7 @@ function PendingPhotoUpload({
   return (
     <div className="flex items-center gap-3 rounded-lg border border-accent bg-white p-4 shadow-sm">
       <span className="grid h-9 w-9 flex-none place-items-center rounded-md bg-accent text-white">
-        <Image className="h-5 w-5" aria-hidden />
+        <Image aria-hidden className="h-5 w-5" />
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-bold">{label}</p>
@@ -1317,7 +1403,7 @@ function PendingPhotoUpload({
         onClick={onDismiss}
         type="button"
       >
-        <X className="h-4 w-4" aria-hidden />
+        <X aria-hidden className="h-4 w-4" />
       </button>
     </div>
   );
@@ -1421,21 +1507,6 @@ function TextAreaField({
         value={value}
       />
     </label>
-  );
-}
-
-function EmptyDashboard() {
-  return (
-    <section className="rounded-lg border border-border bg-white p-8 text-center shadow-sm">
-      <p className="text-lg font-black">เข้าสู่ โมดองทันที</p>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-        Login หรือ Register เพื่อดูจำนวนของที่มี ของที่ตามหา และ private summary
-        ของตัวเอง
-      </p>
-      <p className="mt-5 text-sm font-bold text-accent">
-        {publicPhrases.wantedShare}
-      </p>
-    </section>
   );
 }
 

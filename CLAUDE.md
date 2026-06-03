@@ -8,7 +8,7 @@ Dongmodel is a Thai-first web app for collectors to record **Modong** (acquired 
 
 | Path | Package | Role |
 |------|---------|------|
-| `apps/web` | `@dongmodel/web` | Next.js 14 frontend |
+| `apps/web` | `@dongmodel/web` | Next.js 15 frontend |
 | `apps/api` | `@dongmodel/api` | NestJS backend API |
 | `packages/shared` | `@dongmodel/shared` | Zod schemas + domain constants |
 
@@ -55,7 +55,7 @@ All terms come from `CONTEXT.md`. Key ones:
 
 **Backend (`apps/api`):** NestJS · Prisma · MySQL · HTTP-only session cookies (`dongmodel_session`) · REST API at `/api/v1/...`
 
-**Frontend (`apps/web`):** Next.js 14 · Tailwind CSS · shadcn/ui · `NEXT_PUBLIC_API_BASE_URL` for API calls
+**Frontend (`apps/web`):** Next.js 15 · Tailwind CSS · shadcn/ui · `NEXT_PUBLIC_API_BASE_URL` for API calls
 
 **Shared (`packages/shared`):** Zod schemas (`schemas.ts`) · domain constants (`domain.ts`) — build before running tests or typecheck
 

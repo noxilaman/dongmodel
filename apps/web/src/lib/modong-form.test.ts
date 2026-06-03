@@ -25,8 +25,13 @@ describe("modong form helpers", () => {
         state: "ต่อไม่เสร็จ",
         releaseYear: "2019",
         acquisitionYear: "2024",
+        releasedAwayYear: "2026",
+        acquisitionSource: " ร้านประจำ ",
         purchaseAmount: "1500",
         purchaseCurrency: " jpy ",
+        releaseAmount: "1200",
+        releaseCurrency: " usd ",
+        galleryVisible: false,
         storageNote: " ชั้นสอง ",
         privateNote: " ต่อหลัง MG "
       })
@@ -34,8 +39,13 @@ describe("modong form helpers", () => {
       state: "ต่อไม่เสร็จ",
       releaseYear: 2019,
       acquisitionYear: 2024,
+      releasedAwayYear: 2026,
+      acquisitionSource: "ร้านประจำ",
       purchaseAmount: 1500,
       purchaseCurrency: "JPY",
+      releaseAmount: 1200,
+      releaseCurrency: "USD",
+      galleryVisible: false,
       storageNote: "ชั้นสอง",
       privateNote: "ต่อหลัง MG"
     });

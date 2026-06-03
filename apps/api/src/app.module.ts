@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { AdminModule } from "./admin/admin.module";
 import { AuthModule } from "./auth/auth.module";
+import { CommunityModule } from "./community/community.module";
 import { GalleryModule } from "./gallery/gallery.module";
 import { ModongModule } from "./modong/modong.module";
 import { OrganizeModule } from "./organize/organize.module";
@@ -23,7 +24,8 @@ import { WantedModule } from "./wanted/wanted.module";
     ShareModule,
     GalleryModule,
     AdminModule,
-    SummaryModule
+    SummaryModule,
+    CommunityModule
   ]
 })
 export class AppModule {}

@@ -147,7 +147,7 @@ The first frontend dashboard slice supports:
 - Session check on page load
 - Logout
 - Owner Summary display for logged-in Owners
-- Creating a first Modong from the dashboard with name, state, release year, acquisition year, purchase price, storage note, and private note
+- Creating a first Modong from the dashboard with name, state, release year, acquisition year, released-away year, acquisition source, purchase price, release price, gallery visibility, storage note, and private note
 - Empty state for visitors who have not logged in
 
 ## Out Of Scope For MVP

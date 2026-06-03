@@ -27,13 +27,25 @@ pnpm --filter @dongmodel/api prisma:migrate
 pnpm --filter @dongmodel/api prisma:seed
 ```
 
+To bootstrap admin users during development or first deploy, register the user normally, set `ADMIN_EMAILS` in `apps/api/.env`, then run seed again:
+
+```env
+ADMIN_EMAILS="owner@example.com,another@example.com"
+```
+
+```bash
+pnpm --filter @dongmodel/api prisma:seed
+```
+
+Any matching Owner email is promoted to `ADMIN`. Emails that do not exist yet are skipped and printed in the seed log.
+
 To preview only the frontend shell:
 
 ```bash
 pnpm --filter @dongmodel/web dev
 ```
 
-The frontend provides login, register, logout, session check, a private Owner Summary dashboard, a Modong create form, and a Wanted Item create/list/update-state/delete panel — all calling the API through `NEXT_PUBLIC_API_BASE_URL`.
+The frontend provides a full Owner dashboard split across dedicated pages: `/` for overview, `/modong` for Modong CRUD + photos, `/wanted` for Wanted Items CRUD + photos, `/groups` for Modong Groups, `/wanted-lists` for Wanted Lists, and `/admin` for Admin-only Collectible Kind management. Public share pages live at `/s/[token]`, and Owner Gallery lives at `/owners/[handle]` (login required).
 
 ## API Auth Endpoints
 
@@ -103,6 +115,23 @@ Current Wanted List foundation:
 - `DELETE /api/v1/wanted-lists/:id`
 
 Modong may belong to multiple Modong Groups. Wanted Items belong to one Wanted List through their `wantedListId` field.
+
+## API Share Endpoints
+
+- `GET /api/v1/shares/:token` — public, returns Share Card / Group Share Card / Wanted Share payload
+- `POST /api/v1/shares` — owner auth, body `{ kind, modongId | modongGroupId | wantedItemId, featuredModongIds? }`, returns `{ token }`
+- `DELETE /api/v1/shares/:token` — owner auth, revokes share
+
+## API Gallery Endpoint
+
+- `GET /api/v1/owners/:handle/gallery` — requires session cookie, returns gallery-eligible Modong for the given handle
+
+## API Admin Endpoints
+
+- `GET /api/v1/admin/collectible-kinds` — public
+- `POST /api/v1/admin/collectible-kinds` — Admin role only
+- `PATCH /api/v1/admin/collectible-kinds/:id` — Admin role only
+- `DELETE /api/v1/admin/collectible-kinds/:id` — Admin role only
 
 ## API Summary Endpoint
 

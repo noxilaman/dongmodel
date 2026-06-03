@@ -207,8 +207,12 @@ function NotFoundCard() {
 
 function DefaultLogo() {
   return (
-    <div className="flex h-40 items-center justify-center bg-muted">
-      <span className="text-4xl font-black text-muted-foreground">โมดอง</span>
+    <div className="flex h-56 items-center justify-center bg-white">
+      <img
+        alt="Dongmodel"
+        className="h-44 w-44 object-contain"
+        src="/brand/logo.png"
+      />
     </div>
   );
 }

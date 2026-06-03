@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Boxes, Image, Plus, Trash2, X } from "lucide-react";
+import { Boxes, Image, Loader2, Plus, Trash2, X } from "lucide-react";
 import { modongStates } from "@dongmodel/shared";
 import type { ModongState } from "@dongmodel/shared";
 import {
@@ -25,10 +25,15 @@ type EditState = {
   collectibleKindId: string;
   releaseYear: string;
   acquisitionYear: string;
+  releasedAwayYear: string;
+  acquisitionSource: string;
   purchaseAmount: string;
   purchaseCurrency: string;
+  releaseAmount: string;
+  releaseCurrency: string;
   storageNote: string;
   privateNote: string;
+  galleryVisible: boolean;
 };
 
 function toEditState(item: ModongItem): EditState {
@@ -38,17 +43,24 @@ function toEditState(item: ModongItem): EditState {
     collectibleKindId: item.collectibleKind?.id ?? "",
     releaseYear: item.releaseYear?.toString() ?? "",
     acquisitionYear: item.acquisitionYear?.toString() ?? "",
+    releasedAwayYear: item.releasedAwayYear?.toString() ?? "",
+    acquisitionSource: item.acquisitionSource ?? "",
     purchaseAmount: item.purchaseAmount ?? "",
     purchaseCurrency: item.purchaseCurrency,
+    releaseAmount: item.releaseAmount ?? "",
+    releaseCurrency: item.releaseCurrency,
     storageNote: item.storageNote ?? "",
-    privateNote: item.privateNote ?? ""
+    privateNote: item.privateNote ?? "",
+    galleryVisible: item.galleryVisible
   };
 }
 
 export function ModongListPanel({
-  onCountChange
+  onCountChange,
+  refreshKey = 0
 }: {
   onCountChange?: () => void;
+  refreshKey?: number;
 }) {
   const [items, setItems] = useState<ModongItem[]>([]);
   const [editId, setEditId] = useState<string | null>(null);
@@ -58,7 +70,7 @@ export function ModongListPanel({
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [refreshKey]);
 
   async function load() {
     try {
@@ -90,13 +102,22 @@ export function ModongListPanel({
       if (editForm.collectibleKindId) payload.collectibleKindId = editForm.collectibleKindId;
       const releaseYear = parseYear(editForm.releaseYear);
       const acquisitionYear = parseYear(editForm.acquisitionYear);
+      const releasedAwayYear = parseYear(editForm.releasedAwayYear);
       if (releaseYear !== undefined) payload.releaseYear = releaseYear;
       if (acquisitionYear !== undefined) payload.acquisitionYear = acquisitionYear;
+      if (releasedAwayYear !== undefined) payload.releasedAwayYear = releasedAwayYear;
+      if (editForm.acquisitionSource.trim()) {
+        payload.acquisitionSource = editForm.acquisitionSource.trim();
+      }
       if (editForm.storageNote.trim()) payload.storageNote = editForm.storageNote.trim();
       if (editForm.privateNote.trim()) payload.privateNote = editForm.privateNote.trim();
       const amount = parseFloat(editForm.purchaseAmount);
       if (!isNaN(amount)) payload.purchaseAmount = amount;
       payload.purchaseCurrency = editForm.purchaseCurrency || "THB";
+      const releaseAmount = parseFloat(editForm.releaseAmount);
+      if (!isNaN(releaseAmount)) payload.releaseAmount = releaseAmount;
+      payload.releaseCurrency = editForm.releaseCurrency || "THB";
+      payload.galleryVisible = editForm.galleryVisible;
 
       await updateModongItem(id, payload);
       cancelEdit();
@@ -225,6 +246,7 @@ function ItemRow({
   onEdit: () => void;
   onMainPhoto: (file: File) => void;
 }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const allPhotos = [
     ...(item.mainPhoto ? [{ ...item.mainPhoto, isMain: true }] : []),
     ...item.additionalPhotos.map((p) => ({ ...p, isMain: false }))
@@ -299,39 +321,73 @@ function ItemRow({
           <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
             {item.releaseYear ? <span>ปีที่ออก {item.releaseYear}</span> : null}
             {item.acquisitionYear ? <span>ได้มาปี {item.acquisitionYear}</span> : null}
+            {item.releasedAwayYear ? (
+              <span>ปล่อยไปปี {item.releasedAwayYear}</span>
+            ) : null}
+            {item.acquisitionSource ? <span>จาก {item.acquisitionSource}</span> : null}
             {item.purchaseAmount ? (
               <span>
                 {item.purchaseAmount} {item.purchaseCurrency}
               </span>
             ) : null}
+            {item.releaseAmount ? (
+              <span>
+                ปล่อย {item.releaseAmount} {item.releaseCurrency}
+              </span>
+            ) : null}
+            {!item.galleryVisible ? <span>ไม่แสดงใน Gallery</span> : null}
           </div>
         </div>
 
         {/* Actions */}
         <div className="flex flex-none flex-col items-end gap-1">
           <div className="flex gap-1">
-            <button
-              className="rounded-md border border-border px-2 py-1 text-xs font-bold hover:border-accent disabled:opacity-40"
-              disabled={busy}
-              onClick={onEdit}
-              type="button"
-            >
-              แก้ไข
-            </button>
-            <button
-              aria-label={`ลบ ${item.name}`}
-              className="grid h-7 w-7 place-items-center rounded-md border border-border text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-40"
-              disabled={busy}
-              onClick={onDelete}
-              type="button"
-            >
-              <Trash2 className="h-3.5 w-3.5" aria-hidden />
-            </button>
+            {confirmDelete ? (
+              <div className="animate-fade-in flex gap-1">
+                <button
+                  className="rounded-md bg-primary px-2 py-1 text-xs font-black text-white disabled:opacity-60"
+                  disabled={busy}
+                  onClick={() => { setConfirmDelete(false); onDelete(); }}
+                  type="button"
+                >
+                  ลบออก
+                </button>
+                <button
+                  className="rounded-md border border-border px-2 py-1 text-xs font-bold"
+                  onClick={() => setConfirmDelete(false)}
+                  type="button"
+                >
+                  ยกเลิก
+                </button>
+              </div>
+            ) : (
+              <>
+                <button
+                  className="rounded-md border border-border px-2 py-1 text-xs font-bold hover:border-accent disabled:opacity-40"
+                  disabled={busy}
+                  onClick={onEdit}
+                  type="button"
+                >
+                  แก้ไข
+                </button>
+                <button
+                  aria-label={`ลบ ${item.name}`}
+                  className="grid h-7 w-7 place-items-center rounded-md border border-border text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-40"
+                  disabled={busy}
+                  onClick={() => setConfirmDelete(true)}
+                  type="button"
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                </button>
+              </>
+            )}
           </div>
-          <ShareButton
-            disabled={busy}
-            onShare={() => createModongShare(item.id)}
-          />
+          {!confirmDelete ? (
+            <ShareButton
+              disabled={busy}
+              onShare={() => createModongShare(item.id)}
+            />
+          ) : null}
         </div>
       </div>
 
@@ -347,13 +403,13 @@ function ItemRow({
               />
               {!p.isMain ? (
                 <button
-                  aria-label="ลบรูป"
-                  className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-primary text-white"
+                  aria-label="ลบรูปเพิ่มเติม"
+                  className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-primary text-white"
                   disabled={busy}
                   onClick={() => onDeletePhoto(p.id)}
                   type="button"
                 >
-                  <X className="h-2.5 w-2.5" aria-hidden />
+                  <X className="h-3 w-3" aria-hidden />
                 </button>
               ) : null}
             </div>
@@ -394,7 +450,7 @@ function EditRow({
   onSave: () => void;
 }) {
   return (
-    <div className="rounded-md border border-accent p-4">
+    <div className="animate-fade-in rounded-md border border-accent p-4">
       <div className="grid gap-3">
         <Field label="ชื่อของ">
           <input
@@ -442,6 +498,25 @@ function EditRow({
           </Field>
         </div>
 
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="ปีที่ปล่อยไปแล้ว">
+            <input
+              className="h-10 w-full rounded-md border border-border px-3 text-sm outline-none focus:border-accent"
+              onChange={(e) => onChange({ ...form, releasedAwayYear: e.target.value })}
+              type="number"
+              value={form.releasedAwayYear}
+            />
+          </Field>
+          <Field label="แหล่งที่ได้มา">
+            <input
+              className="h-10 w-full rounded-md border border-border px-3 text-sm outline-none focus:border-accent"
+              onChange={(e) => onChange({ ...form, acquisitionSource: e.target.value })}
+              type="text"
+              value={form.acquisitionSource}
+            />
+          </Field>
+        </div>
+
         <div className="grid gap-3 sm:grid-cols-[1fr_88px]">
           <Field label="ราคาซื้อ">
             <input
@@ -460,6 +535,35 @@ function EditRow({
             />
           </Field>
         </div>
+
+        <div className="grid gap-3 sm:grid-cols-[1fr_88px]">
+          <Field label="ราคาตอนปล่อย">
+            <input
+              className="h-10 w-full rounded-md border border-border px-3 text-sm outline-none focus:border-accent"
+              onChange={(e) => onChange({ ...form, releaseAmount: e.target.value })}
+              type="number"
+              value={form.releaseAmount}
+            />
+          </Field>
+          <Field label="สกุลเงิน">
+            <input
+              className="h-10 w-full rounded-md border border-border px-3 text-sm outline-none focus:border-accent"
+              onChange={(e) => onChange({ ...form, releaseCurrency: e.target.value })}
+              type="text"
+              value={form.releaseCurrency}
+            />
+          </Field>
+        </div>
+
+        <label className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm font-semibold">
+          <span>แสดงใน Gallery</span>
+          <input
+            checked={form.galleryVisible}
+            className="h-5 w-5 accent-accent"
+            onChange={(e) => onChange({ ...form, galleryVisible: e.target.checked })}
+            type="checkbox"
+          />
+        </label>
 
         <Field label="ที่เก็บ">
           <textarea
@@ -480,11 +584,15 @@ function EditRow({
 
       <div className="mt-4 flex gap-2">
         <button
-          className="flex-1 rounded-md bg-primary px-3 py-2 text-sm font-black text-white disabled:opacity-60"
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-black text-white disabled:opacity-60"
           disabled={busy || !form.name.trim()}
           onClick={onSave}
           type="button"
         >
+          {busy
+            ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            : null
+          }
           บันทึก
         </button>
         <button

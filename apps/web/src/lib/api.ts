@@ -241,8 +241,12 @@ export type ModongItem = {
   collectibleKind: { id: string; name: string } | null;
   releaseYear: number | null;
   acquisitionYear: number | null;
+  releasedAwayYear: number | null;
+  acquisitionSource: string | null;
   purchaseAmount: string | null;
   purchaseCurrency: string;
+  releaseAmount: string | null;
+  releaseCurrency: string;
   storageNote: string | null;
   privateNote: string | null;
   galleryVisible: boolean;
@@ -263,10 +267,14 @@ export async function updateModongItem(
     collectibleKindId: string;
     releaseYear: number | null;
     acquisitionYear: number | null;
+    releasedAwayYear: number | null;
+    acquisitionSource: string;
     storageNote: string;
     privateNote: string;
     purchaseAmount: number | null;
     purchaseCurrency: string;
+    releaseAmount: number | null;
+    releaseCurrency: string;
     galleryVisible: boolean;
   }>
 ): Promise<ModongItem> {
@@ -335,6 +343,47 @@ export async function addModongToGroup(groupId: string, modongId: string): Promi
   });
 }
 
+// --- Gallery ---
+
+export type GalleryItem = {
+  id: string;
+  name: string;
+  state: string;
+  collectibleKind: string | null;
+  releaseYear: number | null;
+  acquisitionYear: number | null;
+  mainPhotoUrl: string | null;
+};
+
+export type GalleryResponse = {
+  owner: { displayName: string; handle: string };
+  items: GalleryItem[];
+};
+
+export async function getOwnerGallery(handle: string): Promise<GalleryResponse> {
+  return requestJson<GalleryResponse>(`/owners/${handle}/gallery`);
+}
+
+// --- Community feed ---
+
+export type CommunityItem = {
+  id: string;
+  name: string;
+  state: string;
+  collectibleKind: { id: string; name: string } | null;
+  mainPhotoUrl: string | null;
+  ownerHandle: string;
+  ownerDisplayName: string;
+};
+
+export async function getCommunityFeed(kindId?: string): Promise<CommunityItem[]> {
+  const path = kindId
+    ? `/community?kindId=${encodeURIComponent(kindId)}`
+    : "/community";
+  const result = await requestJson<{ items: CommunityItem[] }>(path);
+  return result.items;
+}
+
 // --- Public share view ---
 
 export type ShareModongPayload = {
@@ -396,10 +445,17 @@ export async function createModongShare(modongId: string): Promise<string> {
   return result.token;
 }
 
-export async function createModongGroupShare(modongGroupId: string): Promise<string> {
+export async function createModongGroupShare(
+  modongGroupId: string,
+  featuredModongIds: string[] = []
+): Promise<string> {
   const result = await requestJson<{ token: string }>("/shares", {
     method: "POST",
-    body: JSON.stringify({ kind: "MODONG_GROUP", modongGroupId })
+    body: JSON.stringify({
+      kind: "MODONG_GROUP",
+      modongGroupId,
+      featuredModongIds
+    })
   });
   return result.token;
 }

@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
   Boxes,
+  ChevronDown,
   Image,
   KeyRound,
+  Loader2,
   LogOut,
   Plus,
   Search,
@@ -14,6 +16,7 @@ import {
   Trash2,
   X
 } from "lucide-react";
+import Link from "next/link";
 import {
   modongStates,
   type OwnerSummary,
@@ -70,6 +73,36 @@ type FormState = {
   password: string;
 };
 
+export type DashboardSection =
+  | "overview"
+  | "modong"
+  | "wanted"
+  | "groups"
+  | "wanted-lists"
+  | "admin";
+
+const dashboardSections: Array<{
+  href: string;
+  label: string;
+  section: DashboardSection;
+}> = [
+  { href: "/", label: "ภาพรวม", section: "overview" },
+  { href: "/modong", label: "โมดอง", section: "modong" },
+  { href: "/wanted", label: "ของที่ตามหา", section: "wanted" },
+  { href: "/groups", label: "กลุ่มโมดอง", section: "groups" },
+  { href: "/wanted-lists", label: "รายการตามหา", section: "wanted-lists" },
+  { href: "/admin", label: "Admin", section: "admin" }
+];
+
+const sectionTitles: Record<DashboardSection, string> = {
+  overview: "ภาพรวมกองสะสมส่วนตัว",
+  modong: "โมดอง",
+  wanted: "ของที่ตามหา",
+  groups: "กลุ่มโมดอง",
+  "wanted-lists": "รายการตามหา",
+  admin: "Admin"
+};
+
 const emptyForm: FormState = {
   displayName: "",
   handle: "",
@@ -77,10 +110,17 @@ const emptyForm: FormState = {
   password: ""
 };
 
-export function DashboardClient() {
+export function DashboardClient({
+  section = "overview"
+}: {
+  section?: DashboardSection;
+}) {
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [form, setForm] = useState<FormState>(emptyForm);
   const [modongForm, setModongForm] = useState<ModongFormState>(emptyModongForm);
+  const [modongMainPhotoFile, setModongMainPhotoFile] = useState<File | null>(null);
+  const [isModongCreateOpen, setIsModongCreateOpen] = useState(false);
+  const [modongRefreshKey, setModongRefreshKey] = useState(0);
   const [wantedForm, setWantedForm] = useState<WantedFormState>(emptyWantedForm);
   const [wantedItems, setWantedItems] = useState<WantedItem[]>([]);
   // After creation, hold the new item's id + name so user can upload a photo before dismissing.
@@ -164,9 +204,15 @@ export function DashboardClient() {
 
     try {
       const created = await createModongItem(buildCreateModongPayload(modongForm));
+      if (modongMainPhotoFile) {
+        await uploadModongMainPhoto(created.id, modongMainPhotoFile);
+      }
       setModongForm(emptyModongForm);
+      setModongMainPhotoFile(null);
+      setIsModongCreateOpen(false);
       setStatus(`เพิ่ม "${created.name}" เข้าโมดองแล้ว`);
-      setPendingModongPhoto({ id: created.id, name: created.name });
+      setPendingModongPhoto(null);
+      setModongRefreshKey((key) => key + 1);
       setSummary(await getOwnerSummary());
     } catch (modongError) {
       setError(getErrorMessage(modongError));
@@ -289,9 +335,11 @@ export function DashboardClient() {
         <aside className="flex flex-col gap-4">
           <div className="rounded-lg border border-border bg-white p-5 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="grid h-11 w-11 place-items-center rounded-lg bg-foreground text-white">
-                <Boxes className="h-6 w-6" aria-hidden />
-              </div>
+              <img
+                alt="Dongmodel"
+                className="h-14 w-14 rounded-md object-contain"
+                src="/brand/logo.png"
+              />
               <div>
                 <p className="text-sm font-semibold text-muted-foreground">
                   Dongmodel
@@ -308,6 +356,7 @@ export function DashboardClient() {
 
           {owner ? (
             <OwnerPanel
+              activeSection={section}
               busy={busy}
               owner={owner}
               onLogout={handleLogout}
@@ -328,9 +377,9 @@ export function DashboardClient() {
         <section className="flex flex-col gap-4">
           <div className="flex flex-col gap-2 border-b border-border pb-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-sm font-bold text-primary">{status}</p>
+              <p aria-live="polite" className="text-sm font-bold text-primary">{status}</p>
               <h2 className="text-3xl font-black leading-tight sm:text-4xl">
-                ภาพรวมกองสะสมส่วนตัว
+                {sectionTitles[section]}
               </h2>
             </div>
             <div className="inline-flex w-fit items-center gap-2 rounded-md border border-border bg-white px-3 py-2 text-sm font-semibold">
@@ -340,7 +389,11 @@ export function DashboardClient() {
           </div>
 
           {error ? (
-            <div className="rounded-lg border border-primary bg-white p-4 text-sm font-semibold text-primary">
+            <div
+              aria-live="assertive"
+              className="animate-fade-in rounded-lg border border-primary bg-white p-4 text-sm font-semibold text-primary"
+              role="alert"
+            >
               {error}
             </div>
           ) : null}
@@ -357,6 +410,11 @@ export function DashboardClient() {
               pendingModongPhoto={pendingModongPhoto}
               onModongPhotoDismiss={() => setPendingModongPhoto(null)}
               onModongPhotoUpload={handleModongPhotoUpload}
+              isModongCreateOpen={isModongCreateOpen}
+              modongMainPhotoFile={modongMainPhotoFile}
+              modongRefreshKey={modongRefreshKey}
+              onModongCreateOpenChange={setIsModongCreateOpen}
+              onModongMainPhotoFileChange={setModongMainPhotoFile}
               summary={summary}
               wantedForm={wantedForm}
               wantedItems={wantedItems}
@@ -368,6 +426,7 @@ export function DashboardClient() {
               onWantedPhotoDismiss={() => setPendingWantedPhoto(null)}
               onWantedPhotoUpload={handleWantedPhotoUpload}
               onDeletePhoto={handleDeletePhoto}
+              section={section}
             />
           ) : (
             <EmptyDashboard />
@@ -452,7 +511,10 @@ function AuthPanel({
         disabled={busy}
         type="submit"
       >
-        <KeyRound className="h-4 w-4" aria-hidden />
+        {busy
+          ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          : <KeyRound className="h-4 w-4" aria-hidden />
+        }
         เข้าสู่ โมดองทันที
       </button>
     </form>
@@ -460,11 +522,13 @@ function AuthPanel({
 }
 
 function OwnerPanel({
+  activeSection,
   busy,
   owner,
   onLogout,
   onRefresh
 }: {
+  activeSection: DashboardSection;
   busy: boolean;
   owner: Owner;
   onLogout: () => void;
@@ -490,10 +554,38 @@ function OwnerPanel({
           onClick={onLogout}
           type="button"
         >
-          <LogOut className="h-4 w-4" aria-hidden />
+          {busy
+            ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            : <LogOut className="h-4 w-4" aria-hidden />
+          }
           Logout
         </button>
       </div>
+      <div className="mt-2">
+        <Link
+          className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-bold transition-colors duration-150 hover:border-accent"
+          href={`/owners/${owner.handle}`}
+        >
+          ดู Gallery ของฉัน
+        </Link>
+      </div>
+      <nav className="mt-4 grid gap-2 border-t border-border pt-4">
+        {dashboardSections
+          .filter((item) => item.section !== "admin" || owner.role === "ADMIN")
+          .map((item) => (
+            <Link
+              className={`rounded-md border px-3 py-2 text-sm font-bold transition-colors duration-150 ${
+                activeSection === item.section
+                  ? "border-foreground bg-foreground text-white"
+                  : "border-border hover:border-accent"
+              }`}
+              href={item.href}
+              key={item.section}
+            >
+              {item.label}
+            </Link>
+          ))}
+      </nav>
     </div>
   );
 }
@@ -509,6 +601,11 @@ function SummaryDashboard({
   pendingModongPhoto,
   onModongPhotoDismiss,
   onModongPhotoUpload,
+  isModongCreateOpen,
+  modongMainPhotoFile,
+  modongRefreshKey,
+  onModongCreateOpenChange,
+  onModongMainPhotoFileChange,
   summary,
   wantedForm,
   wantedItems,
@@ -519,7 +616,8 @@ function SummaryDashboard({
   pendingWantedPhoto,
   onWantedPhotoDismiss,
   onWantedPhotoUpload,
-  onDeletePhoto
+  onDeletePhoto,
+  section
 }: {
   activeTotal: number;
   busy: boolean;
@@ -531,6 +629,11 @@ function SummaryDashboard({
   pendingModongPhoto: { id: string; name: string } | null;
   onModongPhotoDismiss: () => void;
   onModongPhotoUpload: (id: string, file: File) => void;
+  isModongCreateOpen: boolean;
+  modongMainPhotoFile: File | null;
+  modongRefreshKey: number;
+  onModongCreateOpenChange: (open: boolean) => void;
+  onModongMainPhotoFileChange: (file: File | null) => void;
   summary: OwnerSummary;
   wantedForm: WantedFormState;
   wantedItems: WantedItem[];
@@ -542,121 +645,197 @@ function SummaryDashboard({
   onWantedPhotoDismiss: () => void;
   onWantedPhotoUpload: (id: string, file: File) => void;
   onDeletePhoto: (photoId: string) => void;
+  section: DashboardSection;
 }) {
-  return (
-    <>
-      <section className="grid gap-3 sm:grid-cols-3">
-        <MetricCard label="ของที่มีในมือ" value={activeTotal} />
-        <MetricCard label="โมดองทั้งหมด" value={summary.modongTotal} />
-        <MetricCard label="ของที่ตามหา" value={summary.wantedTotal} />
-      </section>
+  const modongStatePanel = (
+    <StatePanel
+      icon={<Boxes className="h-5 w-5" aria-hidden />}
+      rows={modongStates.map((state) => ({
+        label: state,
+        value: getModongStateCount(summary, state)
+      }))}
+      title="สถานะโมดอง"
+    />
+  );
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <div className="flex flex-col gap-3">
-          <CreateModongPanel
-            busy={busy}
-            form={modongForm}
-            onChange={onModongFormChange}
-            onSubmit={onModongSubmit}
-          />
-          {pendingModongPhoto ? (
-            <PendingPhotoUpload
-              busy={busy}
-              label="อัพโหลดรูปโมดอง (Main Photo)"
-              name={pendingModongPhoto.name}
-              onDismiss={onModongPhotoDismiss}
-              onUpload={(file) => onModongPhotoUpload(pendingModongPhoto.id, file)}
-            />
-          ) : null}
-        </div>
-        <StatePanel
-          icon={<Boxes className="h-5 w-5" aria-hidden />}
-          rows={modongStates.map((state) => ({
-            label: state,
-            value: getModongStateCount(summary, state)
-          }))}
-          title="สถานะโมดอง"
-        />
-      </section>
+  const wantedStatePanel = (
+    <StatePanel
+      icon={<Search className="h-5 w-5" aria-hidden />}
+      rows={wantedStates.map((state) => ({
+        label: state,
+        value: getWantedStateCount(summary, state)
+      }))}
+      title="สถานะของที่ตามหา"
+    />
+  );
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <div className="flex flex-col gap-3">
-          <CreateWantedPanel
-            busy={busy}
-            form={wantedForm}
-            onChange={onWantedFormChange}
-            onSubmit={onWantedSubmit}
-          />
-          {pendingWantedPhoto ? (
-            <PendingPhotoUpload
-              busy={busy}
-              label="อัพโหลดรูปอ้างอิง (Wanted Reference Photo)"
-              name={pendingWantedPhoto.name}
-              onDismiss={onWantedPhotoDismiss}
-              onUpload={(file) => onWantedPhotoUpload(pendingWantedPhoto.id, file)}
-            />
-          ) : null}
-        </div>
-        <StatePanel
-          icon={<Search className="h-5 w-5" aria-hidden />}
-          rows={wantedStates.map((state) => ({
-            label: state,
-            value: getWantedStateCount(summary, state)
-          }))}
-          title="สถานะของที่ตามหา"
-        />
-      </section>
-
-      {wantedItems.length > 0 ? (
-        <WantedItemsPanel
-          busy={busy}
-          items={wantedItems}
-          onDelete={onWantedDelete}
-          onStateChange={onWantedStateChange}
-          onPhotoUpload={onWantedPhotoUpload}
-          onPhotoDelete={onDeletePhoto}
-        />
-      ) : null}
-
-      <ModongListPanel onCountChange={onSummaryRefresh} />
-
-      <ModongGroupsPanel />
-
-      <WantedListsPanel />
-
-      {owner?.role === "ADMIN" ? <AdminKindsPanel /> : null}
-
-      <section className="rounded-lg border border-border bg-white p-5 shadow-sm">
+  const privateSummaryPanel = (
+    <details className="group rounded-lg border border-border bg-white shadow-sm">
+      <summary className="flex cursor-pointer list-none items-center justify-between p-5 [&::-webkit-details-marker]:hidden">
         <h3 className="text-lg font-black">Private value summary</h3>
-        <div className="mt-4 grid gap-3">
-          <PrivateValue
-            label="ราคาซื้อ"
-            value={formatValueSummary(summary.privateValueSummary.purchase)}
+        <ChevronDown
+          aria-hidden
+          className="h-4 w-4 flex-none text-muted-foreground transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-open:rotate-180"
+        />
+      </summary>
+      <div className="grid gap-3 px-5 pb-5">
+        <PrivateValue
+          label="ราคาซื้อ"
+          value={formatValueSummary(summary.privateValueSummary.purchase)}
+        />
+        <PrivateValue
+          label="ราคาตอนปล่อยไปแล้ว"
+          value={formatValueSummary(summary.privateValueSummary.release)}
+        />
+      </div>
+    </details>
+  );
+
+  if (section === "overview") {
+    return (
+      <>
+        <article className="rounded-lg border border-border bg-white p-5 shadow-sm">
+          <p className="text-sm font-bold text-muted-foreground">ของที่มีในมือ</p>
+          <p className="mt-1 text-5xl font-black sm:text-6xl">{activeTotal}</p>
+        </article>
+        <section className="grid gap-3 sm:grid-cols-2">
+          <MetricCard label="โมดองทั้งหมด" value={summary.modongTotal} />
+          <MetricCard label="ของที่ตามหา" value={summary.wantedTotal} />
+        </section>
+        <section className="grid gap-4 lg:grid-cols-2">
+          {modongStatePanel}
+          {wantedStatePanel}
+        </section>
+        {privateSummaryPanel}
+      </>
+    );
+  }
+
+  if (section === "modong") {
+    return (
+      <>
+        {modongStatePanel}
+        <ModongListPanel
+          onCountChange={onSummaryRefresh}
+          refreshKey={modongRefreshKey}
+        />
+        <section className="rounded-lg border border-border bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-lg font-black">เพิ่มโมดอง</h3>
+              <p className="mt-1 text-sm font-semibold text-muted-foreground">
+                เพิ่มรายการใหม่พร้อม Main Photo ได้ในครั้งเดียว
+              </p>
+            </div>
+            <button
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-black text-white disabled:opacity-60"
+              disabled={busy}
+              onClick={() => onModongCreateOpenChange(!isModongCreateOpen)}
+              type="button"
+            >
+              {isModongCreateOpen ? (
+                <X className="h-4 w-4" aria-hidden />
+              ) : (
+                <Plus className="h-4 w-4" aria-hidden />
+              )}
+              {isModongCreateOpen ? "ปิดฟอร์ม" : "Add โมดอง"}
+            </button>
+          </div>
+          {isModongCreateOpen ? (
+            <CreateModongPanel
+              busy={busy}
+              form={modongForm}
+              mainPhotoFile={modongMainPhotoFile}
+              onChange={onModongFormChange}
+              onMainPhotoFileChange={onModongMainPhotoFileChange}
+              onSubmit={onModongSubmit}
+            />
+          ) : null}
+        </section>
+      </>
+    );
+  }
+
+  if (section === "wanted") {
+    return (
+      <>
+        <section className="grid gap-4 lg:grid-cols-2">
+          <div className="flex flex-col gap-3">
+            <CreateWantedPanel
+              busy={busy}
+              form={wantedForm}
+              onChange={onWantedFormChange}
+              onSubmit={onWantedSubmit}
+            />
+            {pendingWantedPhoto ? (
+              <PendingPhotoUpload
+                busy={busy}
+                label="อัพโหลดรูปอ้างอิง (Wanted Reference Photo)"
+                name={pendingWantedPhoto.name}
+                onDismiss={onWantedPhotoDismiss}
+                onUpload={(file) => onWantedPhotoUpload(pendingWantedPhoto.id, file)}
+              />
+            ) : null}
+          </div>
+          {wantedStatePanel}
+        </section>
+        {wantedItems.length > 0 ? (
+          <WantedItemsPanel
+            busy={busy}
+            items={wantedItems}
+            onDelete={onWantedDelete}
+            onStateChange={onWantedStateChange}
+            onPhotoUpload={onWantedPhotoUpload}
+            onPhotoDelete={onDeletePhoto}
           />
-          <PrivateValue
-            label="ราคาตอนปล่อยไปแล้ว"
-            value={formatValueSummary(summary.privateValueSummary.release)}
-          />
-        </div>
-      </section>
-    </>
+        ) : (
+          <section className="rounded-lg border border-border bg-white p-5 text-sm font-semibold text-muted-foreground shadow-sm">
+            ยังไม่มีของที่ตามหา
+          </section>
+        )}
+      </>
+    );
+  }
+
+  if (section === "groups") {
+    return <ModongGroupsPanel />;
+  }
+
+  if (section === "wanted-lists") {
+    return <WantedListsPanel />;
+  }
+
+  if (owner?.role === "ADMIN") {
+    return <AdminKindsPanel />;
+  }
+
+  return (
+    <section className="rounded-lg border border-border bg-white p-5 text-sm font-semibold text-muted-foreground shadow-sm">
+      หน้านี้ใช้ได้เฉพาะ Admin
+    </section>
   );
 }
 
 function CreateModongPanel({
   busy,
   form,
+  mainPhotoFile,
   onChange,
+  onMainPhotoFileChange,
   onSubmit
 }: {
   busy: boolean;
   form: ModongFormState;
+  mainPhotoFile: File | null;
   onChange: (form: ModongFormState) => void;
+  onMainPhotoFileChange: (file: File | null) => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
 }) {
+  const [showDetails, setShowDetails] = useState(false);
+
   return (
     <form
-      className="rounded-lg border border-border bg-white p-5 shadow-sm"
+      className="mt-4 rounded-lg border border-border bg-white p-5 shadow-sm"
       onSubmit={onSubmit}
     >
       <div className="flex items-center gap-2">
@@ -700,51 +879,133 @@ function CreateModongPanel({
           value={form.collectibleKindId}
         />
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <TextField
-            label="ปีที่ออก"
-            name="releaseYear"
-            onChange={(value) => onChange({ ...form, releaseYear: value })}
-            type="number"
-            value={form.releaseYear}
+        <label className="grid gap-2 rounded-md border border-dashed border-border p-3 text-sm font-semibold">
+          <span>Main Photo</span>
+          <span className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <span className="truncate text-muted-foreground">
+              {mainPhotoFile ? mainPhotoFile.name : "เลือกรูปของจริงที่ถ่ายเอง"}
+            </span>
+            <span className="inline-flex w-fit items-center justify-center gap-2 rounded-md bg-foreground px-3 py-2 text-xs font-black text-white">
+              <Image className="h-4 w-4" aria-hidden />
+              เลือกรูป
+            </span>
+          </span>
+          <input
+            accept="image/*"
+            className="sr-only"
+            disabled={busy}
+            onChange={(event) =>
+              onMainPhotoFileChange(event.target.files?.[0] ?? null)
+            }
+            type="file"
           />
-          <TextField
-            label="ปีที่ได้"
-            name="acquisitionYear"
-            onChange={(value) => onChange({ ...form, acquisitionYear: value })}
-            type="number"
-            value={form.acquisitionYear}
-          />
-        </div>
+        </label>
 
-        <div className="grid gap-3 sm:grid-cols-[1fr_88px]">
-          <TextField
-            label="ราคาซื้อ"
-            name="purchaseAmount"
-            onChange={(value) => onChange({ ...form, purchaseAmount: value })}
-            type="number"
-            value={form.purchaseAmount}
+        <button
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground"
+          onClick={() => setShowDetails((v) => !v)}
+          type="button"
+        >
+          <ChevronDown
+            aria-hidden
+            className={`h-4 w-4 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] ${showDetails ? "rotate-180" : ""}`}
           />
-          <TextField
-            label="สกุลเงิน"
-            name="purchaseCurrency"
-            onChange={(value) => onChange({ ...form, purchaseCurrency: value })}
-            value={form.purchaseCurrency}
-          />
-        </div>
+          {showDetails ? "ซ่อนรายละเอียด" : "เพิ่มรายละเอียด"}
+        </button>
 
-        <TextAreaField
-          label="ที่เก็บ"
-          name="storageNote"
-          onChange={(value) => onChange({ ...form, storageNote: value })}
-          value={form.storageNote}
-        />
-        <TextAreaField
-          label="note ส่วนตัว"
-          name="privateNote"
-          onChange={(value) => onChange({ ...form, privateNote: value })}
-          value={form.privateNote}
-        />
+        {showDetails ? (
+          <div className="animate-fade-in grid gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <TextField
+                label="ปีที่ออก"
+                name="releaseYear"
+                onChange={(value) => onChange({ ...form, releaseYear: value })}
+                type="number"
+                value={form.releaseYear}
+              />
+              <TextField
+                label="ปีที่ได้"
+                name="acquisitionYear"
+                onChange={(value) => onChange({ ...form, acquisitionYear: value })}
+                type="number"
+                value={form.acquisitionYear}
+              />
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <TextField
+                label="ปีที่ปล่อยไปแล้ว"
+                name="releasedAwayYear"
+                onChange={(value) => onChange({ ...form, releasedAwayYear: value })}
+                type="number"
+                value={form.releasedAwayYear}
+              />
+              <TextField
+                label="แหล่งที่ได้มา"
+                name="acquisitionSource"
+                onChange={(value) => onChange({ ...form, acquisitionSource: value })}
+                value={form.acquisitionSource}
+              />
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-[1fr_88px]">
+              <TextField
+                label="ราคาซื้อ"
+                name="purchaseAmount"
+                onChange={(value) => onChange({ ...form, purchaseAmount: value })}
+                type="number"
+                value={form.purchaseAmount}
+              />
+              <TextField
+                label="สกุลเงิน"
+                name="purchaseCurrency"
+                onChange={(value) => onChange({ ...form, purchaseCurrency: value })}
+                value={form.purchaseCurrency}
+              />
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-[1fr_88px]">
+              <TextField
+                label="ราคาตอนปล่อย"
+                name="releaseAmount"
+                onChange={(value) => onChange({ ...form, releaseAmount: value })}
+                type="number"
+                value={form.releaseAmount}
+              />
+              <TextField
+                label="สกุลเงิน"
+                name="releaseCurrency"
+                onChange={(value) => onChange({ ...form, releaseCurrency: value })}
+                value={form.releaseCurrency}
+              />
+            </div>
+
+            <label className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm font-semibold">
+              <span>แสดงใน Gallery</span>
+              <input
+                checked={form.galleryVisible}
+                className="h-5 w-5 accent-accent"
+                onChange={(event) =>
+                  onChange({ ...form, galleryVisible: event.target.checked })
+                }
+                type="checkbox"
+              />
+            </label>
+
+            <TextAreaField
+              label="ที่เก็บ"
+              name="storageNote"
+              onChange={(value) => onChange({ ...form, storageNote: value })}
+              value={form.storageNote}
+            />
+            <TextAreaField
+              label="note ส่วนตัว"
+              name="privateNote"
+              onChange={(value) => onChange({ ...form, privateNote: value })}
+              value={form.privateNote}
+            />
+          </div>
+        ) : null}
       </div>
 
       <button
@@ -752,7 +1013,10 @@ function CreateModongPanel({
         disabled={busy || !form.name.trim()}
         type="submit"
       >
-        <Plus className="h-4 w-4" aria-hidden />
+        {busy
+          ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          : <Plus className="h-4 w-4" aria-hidden />
+        }
         เพิ่มเข้าโมดอง
       </button>
     </form>
@@ -829,7 +1093,10 @@ function CreateWantedPanel({
         disabled={busy || !form.name.trim()}
         type="submit"
       >
-        <Plus className="h-4 w-4" aria-hidden />
+        {busy
+          ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          : <Plus className="h-4 w-4" aria-hidden />
+        }
         เพิ่มเข้าของที่ตามหา
       </button>
     </form>
@@ -850,8 +1117,13 @@ function WantedItemsPanel({
   onStateChange: (id: string, state: WantedItem["state"]) => void;
   onPhotoUpload: (id: string, file: File) => void;
   onPhotoDelete: (photoId: string) => void;
-})
- {
+}) {
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [pendingMission, setPendingMission] = useState<{
+    id: string;
+    prevState: WantedItem["state"];
+  } | null>(null);
+
   return (
     <section className="rounded-lg border border-border bg-white p-5 shadow-sm">
       <div className="flex items-center gap-2">
@@ -875,18 +1147,18 @@ function WantedItemsPanel({
                     src={`${apiHost}${item.referencePhoto.url}`}
                   />
                   <button
-                    aria-label="ลบรูป"
-                    className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-primary text-white"
+                    aria-label={`ลบรูปอ้างอิง ${item.name}`}
+                    className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-primary text-white"
                     disabled={busy}
                     onClick={() => onPhotoDelete(item.referencePhoto!.id)}
                     type="button"
                   >
-                    <X className="h-2.5 w-2.5" aria-hidden />
+                    <X className="h-3 w-3" aria-hidden />
                   </button>
                 </div>
               ) : (
                 <label
-                  aria-label={`อัพโหลดรูป ${item.name}`}
+                  aria-label={`อัพโหลดรูปอ้างอิง ${item.name}`}
                   className="flex h-12 w-12 flex-none cursor-pointer items-center justify-center rounded border-2 border-dashed border-border text-muted-foreground hover:border-accent hover:text-accent"
                 >
                   <Image className="h-5 w-5" aria-hidden />
@@ -908,10 +1180,15 @@ function WantedItemsPanel({
                 <select
                   className="mt-1 h-8 rounded border border-border bg-white px-2 text-xs outline-none focus:border-accent"
                   disabled={busy}
-                  onChange={(event) =>
-                    onStateChange(item.id, event.target.value as WantedItem["state"])
-                  }
-                  value={item.state}
+                  onChange={(event) => {
+                    const newState = event.target.value as WantedItem["state"];
+                    if (newState === "mission complete") {
+                      setPendingMission({ id: item.id, prevState: item.state });
+                    } else {
+                      onStateChange(item.id, newState);
+                    }
+                  }}
+                  value={pendingMission?.id === item.id ? "mission complete" : item.state}
                 >
                   {wantedStates.map((state) => (
                     <option key={state} value={state}>
@@ -919,7 +1196,34 @@ function WantedItemsPanel({
                     </option>
                   ))}
                 </select>
-                {item.state === "กำลังงมเข็ม" ? (
+                {pendingMission?.id === item.id ? (
+                  <div className="animate-fade-in mt-1.5 rounded-md border border-accent p-2">
+                    <p className="text-xs font-semibold leading-4">
+                      สถานะนี้จะสร้างโมดองใหม่ทันที ยืนยัน?
+                    </p>
+                    <div className="mt-1.5 flex gap-1.5">
+                      <button
+                        className="rounded bg-accent px-2 py-1 text-xs font-black text-white disabled:opacity-60"
+                        disabled={busy}
+                        onClick={() => {
+                          onStateChange(item.id, "mission complete");
+                          setPendingMission(null);
+                        }}
+                        type="button"
+                      >
+                        ยืนยัน
+                      </button>
+                      <button
+                        className="rounded border border-border px-2 py-1 text-xs font-bold"
+                        onClick={() => setPendingMission(null)}
+                        type="button"
+                      >
+                        ยกเลิก
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+                {item.state === "กำลังงมเข็ม" && pendingMission?.id !== item.id ? (
                   <div className="mt-1.5">
                     <ShareButton
                       disabled={busy}
@@ -928,15 +1232,38 @@ function WantedItemsPanel({
                   </div>
                 ) : null}
               </div>
-              <button
-                aria-label={`ลบ ${item.name}`}
-                className="grid h-8 w-8 flex-none place-items-center rounded-md border border-border text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-40"
-                disabled={busy}
-                onClick={() => onDelete(item.id)}
-                type="button"
-              >
-                <Trash2 className="h-4 w-4" aria-hidden />
-              </button>
+              {deleteConfirmId === item.id ? (
+                <div className="animate-fade-in flex flex-none flex-col gap-1">
+                  <button
+                    className="rounded-md bg-primary px-2 py-1 text-xs font-black text-white disabled:opacity-60"
+                    disabled={busy}
+                    onClick={() => {
+                      onDelete(item.id);
+                      setDeleteConfirmId(null);
+                    }}
+                    type="button"
+                  >
+                    ลบออก
+                  </button>
+                  <button
+                    className="rounded-md border border-border px-2 py-1 text-xs font-bold"
+                    onClick={() => setDeleteConfirmId(null)}
+                    type="button"
+                  >
+                    ยกเลิก
+                  </button>
+                </div>
+              ) : (
+                <button
+                  aria-label={`ลบ ${item.name}`}
+                  className="grid h-8 w-8 flex-none place-items-center rounded-md border border-border text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-40"
+                  disabled={busy}
+                  onClick={() => setDeleteConfirmId(item.id)}
+                  type="button"
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden />
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -1000,7 +1327,7 @@ function MetricCard({ label, value }: { label: string; value: number }) {
   return (
     <article className="rounded-lg border border-border bg-white p-5 shadow-sm">
       <p className="text-sm font-bold text-muted-foreground">{label}</p>
-      <p className="mt-2 text-4xl font-black">{value}</p>
+      <p className="mt-2 text-3xl font-black">{value}</p>
     </article>
   );
 }

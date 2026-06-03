@@ -71,6 +71,52 @@ describe("ShareService", () => {
     });
   });
 
+  it("creates a group share with owner-selected featured Modong", async () => {
+    const prisma = createPrismaMock();
+    const service = new ShareService(prisma as never);
+
+    prisma.modongGroup.findFirst.mockResolvedValue({
+      id: "group-1",
+      items: [{ modongId: "modong-1" }, { modongId: "modong-2" }]
+    });
+    prisma.share.findFirst.mockResolvedValue(null);
+    prisma.share.create.mockResolvedValue({});
+
+    await service.createModongGroupShare("owner-1", "group-1", [
+      "modong-2",
+      "modong-1"
+    ]);
+
+    expect(prisma.share.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        ownerId: "owner-1",
+        kind: "MODONG_GROUP",
+        modongGroupId: "group-1",
+        featuredItems: {
+          create: [
+            { modongId: "modong-2", position: 0 },
+            { modongId: "modong-1", position: 1 }
+          ]
+        }
+      })
+    });
+  });
+
+  it("rejects featured Modong outside the selected group", async () => {
+    const prisma = createPrismaMock();
+    const service = new ShareService(prisma as never);
+
+    prisma.modongGroup.findFirst.mockResolvedValue({
+      id: "group-1",
+      items: [{ modongId: "modong-1" }]
+    });
+
+    await expect(
+      service.createModongGroupShare("owner-1", "group-1", ["modong-2"])
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.share.create).not.toHaveBeenCalled();
+  });
+
   it("throws NotFoundException for unknown or revoked token", async () => {
     const prisma = createPrismaMock();
     const service = new ShareService(prisma as never);
@@ -115,6 +161,7 @@ describe("ShareService", () => {
     const service = new ShareService(prisma as never);
 
     prisma.share.findFirst.mockResolvedValue({
+      id: "share-1",
       kind: "WANTED",
       modongId: null,
       modongGroupId: null,
@@ -135,11 +182,99 @@ describe("ShareService", () => {
     expect(payload.wanted.phrase).toBe("อยากรับมาเลี้ยงดู");
   });
 
+  it("uses selected featured photos for group share payload", async () => {
+    const prisma = createPrismaMock();
+    const service = new ShareService(prisma as never);
+
+    prisma.share.findFirst.mockResolvedValue({
+      id: "share-1",
+      kind: "MODONG_GROUP",
+      modongId: null,
+      modongGroupId: "group-1",
+      wantedItemId: null
+    });
+    prisma.modongGroup.findUnique.mockResolvedValue({
+      id: "group-1",
+      name: "กองสุลต่าน",
+      owner: { displayName: "นาย Collector" },
+      items: [
+        {
+          modong: {
+            id: "modong-1",
+            name: "MG Sazabi",
+            state: PrismaModongState.MODONG,
+            releaseYear: 2008,
+            acquisitionYear: 2024,
+            collectibleKind: { name: "Gunpla" },
+            photos: [{ storageKey: "fallback.jpg" }]
+          }
+        }
+      ]
+    });
+    prisma.share.findUnique.mockResolvedValue({
+      featuredItems: [
+        {
+          modong: {
+            photos: [{ storageKey: "selected.jpg" }]
+          }
+        }
+      ]
+    });
+
+    const result = await service.getPublicShare("group-token");
+
+    expect(result.kind).toBe("MODONG_GROUP");
+    expect(
+      (result as { kind: "MODONG_GROUP"; group: { featuredPhotos: string[] } })
+        .group.featuredPhotos
+    ).toEqual(["/uploads/selected.jpg"]);
+  });
+
+  it("falls back to group member photos when no featured photos were selected", async () => {
+    const prisma = createPrismaMock();
+    const service = new ShareService(prisma as never);
+
+    prisma.share.findFirst.mockResolvedValue({
+      id: "share-1",
+      kind: "MODONG_GROUP",
+      modongId: null,
+      modongGroupId: "group-1",
+      wantedItemId: null
+    });
+    prisma.modongGroup.findUnique.mockResolvedValue({
+      id: "group-1",
+      name: "กองสุลต่าน",
+      owner: { displayName: "นาย Collector" },
+      items: [
+        {
+          modong: {
+            id: "modong-1",
+            name: "MG Sazabi",
+            state: PrismaModongState.MODONG,
+            releaseYear: 2008,
+            acquisitionYear: 2024,
+            collectibleKind: { name: "Gunpla" },
+            photos: [{ storageKey: "fallback.jpg" }]
+          }
+        }
+      ]
+    });
+    prisma.share.findUnique.mockResolvedValue({ featuredItems: [] });
+
+    const result = await service.getPublicShare("group-token");
+
+    expect(
+      (result as { kind: "MODONG_GROUP"; group: { featuredPhotos: string[] } })
+        .group.featuredPhotos
+    ).toEqual(["/uploads/fallback.jpg"]);
+  });
+
   it("throws ForbiddenException for non-Needle-Hunting Wanted share", async () => {
     const prisma = createPrismaMock();
     const service = new ShareService(prisma as never);
 
     prisma.share.findFirst.mockResolvedValue({
+      id: "share-1",
       kind: "WANTED",
       modongId: null,
       modongGroupId: null,

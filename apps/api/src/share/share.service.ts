@@ -19,9 +19,25 @@ export class ShareService {
     return this.upsertShare(ownerId, { kind: "MODONG", modongId });
   }
 
-  async createModongGroupShare(ownerId: string, modongGroupId: string) {
-    await this.assertOwnedGroup(ownerId, modongGroupId);
-    return this.upsertShare(ownerId, { kind: "MODONG_GROUP", modongGroupId });
+  async createModongGroupShare(
+    ownerId: string,
+    modongGroupId: string,
+    featuredModongIds: string[] = []
+  ) {
+    const memberIds = await this.assertOwnedGroup(ownerId, modongGroupId);
+    const featuredIds = unique(featuredModongIds).slice(0, 5);
+
+    for (const modongId of featuredIds) {
+      if (!memberIds.has(modongId)) {
+        throw new ForbiddenException("Featured Modong must belong to this group");
+      }
+    }
+
+    return this.upsertShare(ownerId, {
+      kind: "MODONG_GROUP",
+      modongGroupId,
+      featuredModongIds: featuredIds
+    });
   }
 
   async createWantedShare(ownerId: string, wantedItemId: string) {
@@ -78,7 +94,7 @@ export class ShareService {
       case "MODONG":
         return this.buildModongPayload(share.modongId!);
       case "MODONG_GROUP":
-        return this.buildGroupPayload(share.modongGroupId!);
+        return this.buildGroupPayload(share.id, share.modongGroupId!);
       case "WANTED":
         return this.buildWantedPayload(share.wantedItemId!);
     }
@@ -88,7 +104,14 @@ export class ShareService {
 
   private async upsertShare(
     ownerId: string,
-    target: { kind: "MODONG"; modongId: string } | { kind: "MODONG_GROUP"; modongGroupId: string } | { kind: "WANTED"; wantedItemId: string }
+    target:
+      | { kind: "MODONG"; modongId: string }
+      | {
+          kind: "MODONG_GROUP";
+          modongGroupId: string;
+          featuredModongIds: string[];
+        }
+      | { kind: "WANTED"; wantedItemId: string }
   ) {
     // Reuse existing non-revoked share for same target
     const where =
@@ -115,7 +138,17 @@ export class ShareService {
         kind: target.kind,
         ...(target.kind === "MODONG" ? { modongId: target.modongId } : {}),
         ...(target.kind === "MODONG_GROUP" ? { modongGroupId: target.modongGroupId } : {}),
-        ...(target.kind === "WANTED" ? { wantedItemId: target.wantedItemId } : {})
+        ...(target.kind === "WANTED" ? { wantedItemId: target.wantedItemId } : {}),
+        ...(target.kind === "MODONG_GROUP" && target.featuredModongIds.length > 0
+          ? {
+              featuredItems: {
+                create: target.featuredModongIds.map((modongId, position) => ({
+                  modongId,
+                  position
+                }))
+              }
+            }
+          : {})
       }
     });
 
@@ -153,7 +186,7 @@ export class ShareService {
     };
   }
 
-  private async buildGroupPayload(modongGroupId: string) {
+  private async buildGroupPayload(shareId: string, modongGroupId: string) {
     const group = await this.prisma.modongGroup.findUnique({
       where: { id: modongGroupId },
       include: {
@@ -177,6 +210,26 @@ export class ShareService {
     });
     if (!group) throw new NotFoundException("Modong Group not found");
 
+    const share = await this.prisma.share.findUnique({
+      where: { id: shareId },
+      include: {
+        featuredItems: {
+          orderBy: { position: "asc" },
+          include: {
+            modong: {
+              include: {
+                photos: {
+                  where: { kind: "MODONG_MAIN" },
+                  select: { storageKey: true },
+                  take: 1
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
     const modongList = group.items.map((item) => ({
       id: item.modong.id,
       name: item.modong.name,
@@ -189,8 +242,16 @@ export class ShareService {
         : null
     }));
 
-    // Up to 5 featured photo URLs for the group card header
-    const featuredPhotos = modongList
+    const selectedFeaturedPhotos =
+      share?.featuredItems
+        .map((item) =>
+          item.modong.photos[0]
+            ? `/uploads/${item.modong.photos[0].storageKey}`
+            : null
+        )
+        .filter(Boolean)
+        .slice(0, 5) ?? [];
+    const fallbackFeaturedPhotos = modongList
       .map((m) => m.mainPhotoUrl)
       .filter(Boolean)
       .slice(0, 5) as string[];
@@ -201,7 +262,10 @@ export class ShareService {
         name: group.name,
         ownerDisplayName: group.owner.displayName,
         totalCount: group.items.length,
-        featuredPhotos,
+        featuredPhotos:
+          selectedFeaturedPhotos.length > 0
+            ? (selectedFeaturedPhotos as string[])
+            : fallbackFeaturedPhotos,
         modong: modongList
       }
     };
@@ -251,9 +315,14 @@ export class ShareService {
   private async assertOwnedGroup(ownerId: string, id: string) {
     const g = await this.prisma.modongGroup.findFirst({
       where: { id, ownerId },
-      select: { id: true }
+      include: {
+        items: {
+          select: { modongId: true }
+        }
+      }
     });
     if (!g) throw new NotFoundException("Modong Group not found");
+    return new Set(g.items.map((item) => item.modongId));
   }
 
   private async assertOwnedWanted(ownerId: string, id: string) {
@@ -267,4 +336,8 @@ export class ShareService {
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
+}
+
+function unique(values: string[]): string[] {
+  return [...new Set(values)];
 }

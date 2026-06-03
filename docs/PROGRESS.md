@@ -77,11 +77,15 @@ Tracks what has been implemented versus what remains, by area.
 - Token stored as SHA-256 hash; plain token returned only on creation (ADR-003)
 - Re-creating share for same target auto-revokes the old one
 - WANTED share only served when state = `กำลังงมเข็ม`; returns 403 otherwise
-- Unit tests: ✅ (7 tests)
+- Group Share accepts up to five Owner-selected `featuredModongIds`; public payload uses selected photos first and falls back to group photos when none are selected
+- Unit tests: ✅ (11 tests)
 
-### Owner Gallery — 🟡 Stub only
-- `GET /api/v1/owners/:handle/gallery` — returns `{ owner, items: [] }`
-- Missing: Gallery Visibility filter, Owner Handle lookup, authenticated-only guard
+### Owner Gallery — ✅ Done
+- `GET /api/v1/owners/:handle/gallery` — AuthGuard required (logged-in Owners only)
+- Looks up owner by handle, returns `{ owner: { displayName, handle }, items: [...] }`
+- Filters: `galleryVisible=true`, states `MODONG/UNFINISHED/COMPLETED` only (no Released/Black Hole)
+- Each item includes: id, name, state, collectibleKind, releaseYear, acquisitionYear, mainPhotoUrl
+- Unit tests: ✅ (4 tests)
 
 ### Admin (Collectible Kinds) — ✅ Done
 - `GET /api/v1/admin/collectible-kinds` — public, used by forms to populate selector
@@ -90,6 +94,7 @@ Tracks what has been implemented versus what remains, by area.
 - `DELETE /api/v1/admin/collectible-kinds/:id` — Admin only
 - AdminGuard checks `owner.role === "ADMIN"`, built on top of AuthGuard
 - Default kinds seeded via `prisma:seed` (Gunpla, Figure, Board Game, Toy, Model Kit, Book/Manga, Game, อื่น ๆ)
+- Admin bootstrap supported through `ADMIN_EMAILS` in `apps/api/.env`; `prisma:seed` promotes matching Owner emails to `ADMIN`
 - Unit tests: ✅
 
 ---
@@ -107,11 +112,13 @@ Tracks what has been implemented versus what remains, by area.
 - Modong state breakdown panel
 - Wanted Item state breakdown panel
 - Private value summary (purchase/release totals)
+- Dashboard split into dedicated Next.js pages: `/`, `/modong`, `/wanted`, `/groups`, `/wanted-lists`, `/admin`
 
-### Modong — ✅ Done (full CRUD + photos)
-- Create form: name, state, collectible kind, release year, acquisition year, purchase price, storage note, private note
-- After create: pending photo banner for Main Photo upload
-- `ModongListPanel`: list all Modong, edit inline (all fields), delete
+### Modong — ✅ Done (CRUD + photos)
+- Create form: name, state, collectible kind, release year, acquisition year, released-away year, acquisition source, purchase price, release price, gallery visibility, storage note, private note
+- `/modong` page shows Modong state summary first, then the item list, then an Add button that opens the create form
+- Create form supports selecting Main Photo before submit; creation uploads the photo immediately after creating the item
+- `ModongListPanel`: list all Modong, edit inline for Modong fields, delete
 - Main Photo upload (replace), Additional Photos upload (max 5) + delete per photo
 - Modong DTO now includes `mainPhoto`, `additionalPhotos` from backend
 
@@ -134,12 +141,19 @@ Tracks what has been implemented versus what remains, by area.
 - Detail view: show members, remove item, add unassigned Wanted Items
 - Implemented as `WantedListsPanel` component (`features/wanted-lists.tsx`)
 
-### Gallery UI — ❌ Not started
-- Owner Gallery page (`/owners/:handle`)
+### Gallery UI — ✅ Done
+- `/owners/[handle]` — client component, session-checks on load
+- Gate: แสดงหน้า "ต้อง Login ก่อน" พร้อมลิงก์กลับ dashboard ถ้าไม่ได้ login
+- Instagram-like grid: main photo (aspect-square), name, state, kind, years
+- "ดู Gallery ของฉัน" link ใน OwnerPanel บน dashboard
+
+Note:
+- Gallery Visibility is controlled from the Modong create/edit UI.
 
 ### Share UI — ✅ Done
 - `ShareButton` component — กด → สร้าง token → แสดง URL พร้อม copy button (dismiss ได้)
 - ปุ่ม Share ใน ModongListPanel (ทุก item), WantedItemsPanel (เฉพาะ กำลังงมเข็ม), ModongGroupsPanel (detail view)
+- ModongGroupsPanel lets the Owner select up to five group members as featured share images
 - `/s/[token]` — Next.js page (server component) fetch share data แล้ว render ผ่าน `SharePageClient`
   - **Share Card** (MODONG): main photo, name, state, kind, years, owner display name
   - **Group Share Card** (MODONG_GROUP): 5-photo grid header, group name, member list พร้อม photo thumbnails
@@ -163,6 +177,7 @@ Tracks what has been implemented versus what remains, by area.
 | Domain constants (`modongStates`, `wantedStates`, `publicPhrases`) | ✅ Done |
 | Prisma schema + migrations | ✅ Done |
 | Prisma seed | ✅ Done |
+| Admin bootstrap via `ADMIN_EMAILS` | ✅ Done |
 | Local image storage | ✅ Done |
 | HTTP-only session cookies | ✅ Done |
 | Tailwind + shadcn/ui baseline | ✅ Done |
@@ -170,6 +185,17 @@ Tracks what has been implemented versus what remains, by area.
 
 ---
 
-## What's Next (suggested order)
+## MVP Status
 
-1. **Owner Gallery** — backend service + `/owners/:handle` page (authenticated-only, handle lookup, Gallery Visibility filter)
+Core MVP flow is close and the quality gate passes, but a few product gaps remain before calling the MVP fully complete.
+
+**Remaining MVP / decision gaps:**
+- Google login is not implemented yet, but ADR-002 says Dongmodel starts with email/password and Google login.
+- No integration test has verified auth cookies, MySQL migrations, image upload files, or end-to-end create/share flows against a real runtime.
+
+**ที่ยังไม่ครอบคลุม (out of scope ตาม docs/MVP.md):**
+- In-app friends/follows/feeds/comments
+- Public anonymous Owner profiles
+- Wanted List sharing
+- Notifications/reminders
+- Import/export

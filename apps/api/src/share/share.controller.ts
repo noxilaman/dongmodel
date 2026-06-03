@@ -16,7 +16,11 @@ import { ShareService } from "./share.service";
 
 const createShareSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("MODONG"), modongId: z.string().uuid() }),
-  z.object({ kind: z.literal("MODONG_GROUP"), modongGroupId: z.string().uuid() }),
+  z.object({
+    kind: z.literal("MODONG_GROUP"),
+    modongGroupId: z.string().uuid(),
+    featuredModongIds: z.array(z.string().uuid()).max(5).default([])
+  }),
   z.object({ kind: z.literal("WANTED"), wantedItemId: z.string().uuid() })
 ]);
 
@@ -37,7 +41,11 @@ export class ShareController {
       case "MODONG":
         return this.shares.createModongShare(owner.id, input.modongId);
       case "MODONG_GROUP":
-        return this.shares.createModongGroupShare(owner.id, input.modongGroupId);
+        return this.shares.createModongGroupShare(
+          owner.id,
+          input.modongGroupId,
+          input.featuredModongIds
+        );
       case "WANTED":
         return this.shares.createWantedShare(owner.id, input.wantedItemId);
     }

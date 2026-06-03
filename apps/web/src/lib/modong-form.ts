@@ -6,10 +6,15 @@ export type ModongFormState = {
   collectibleKindId: string;
   releaseYear: string;
   acquisitionYear: string;
+  releasedAwayYear: string;
+  acquisitionSource: string;
   storageNote: string;
   privateNote: string;
   purchaseAmount: string;
   purchaseCurrency: string;
+  releaseAmount: string;
+  releaseCurrency: string;
+  galleryVisible: boolean;
 };
 
 export const emptyModongForm: ModongFormState = {
@@ -18,10 +23,15 @@ export const emptyModongForm: ModongFormState = {
   collectibleKindId: "",
   releaseYear: "",
   acquisitionYear: "",
+  releasedAwayYear: "",
+  acquisitionSource: "",
   storageNote: "",
   privateNote: "",
   purchaseAmount: "",
-  purchaseCurrency: "THB"
+  purchaseCurrency: "THB",
+  releaseAmount: "",
+  releaseCurrency: "THB",
+  galleryVisible: true
 };
 
 export function buildCreateModongPayload(
@@ -31,8 +41,8 @@ export function buildCreateModongPayload(
     name: form.name.trim(),
     state: form.state,
     purchaseCurrency: normalizeCurrency(form.purchaseCurrency),
-    releaseCurrency: "THB",
-    galleryVisible: true
+    releaseCurrency: normalizeCurrency(form.releaseCurrency),
+    galleryVisible: form.galleryVisible
   };
 
   if (form.collectibleKindId) {
@@ -41,7 +51,10 @@ export function buildCreateModongPayload(
 
   addOptionalNumber(payload, "releaseYear", form.releaseYear);
   addOptionalNumber(payload, "acquisitionYear", form.acquisitionYear);
+  addOptionalNumber(payload, "releasedAwayYear", form.releasedAwayYear);
   addOptionalNumber(payload, "purchaseAmount", form.purchaseAmount);
+  addOptionalNumber(payload, "releaseAmount", form.releaseAmount);
+  addOptionalText(payload, "acquisitionSource", form.acquisitionSource);
   addOptionalText(payload, "storageNote", form.storageNote);
   addOptionalText(payload, "privateNote", form.privateNote);
 
@@ -53,7 +66,9 @@ function normalizeCurrency(value: string): string {
   return normalized.length === 3 ? normalized : "THB";
 }
 
-function addOptionalText<Key extends "storageNote" | "privateNote">(
+function addOptionalText<
+  Key extends "acquisitionSource" | "storageNote" | "privateNote"
+>(
   payload: CreateModongInput,
   key: Key,
   value: string
@@ -65,7 +80,12 @@ function addOptionalText<Key extends "storageNote" | "privateNote">(
 }
 
 function addOptionalNumber<
-  Key extends "releaseYear" | "acquisitionYear" | "purchaseAmount"
+  Key extends
+    | "releaseYear"
+    | "acquisitionYear"
+    | "releasedAwayYear"
+    | "purchaseAmount"
+    | "releaseAmount"
 >(payload: CreateModongInput, key: Key, value: string) {
   const trimmed = value.trim();
   if (!trimmed) {

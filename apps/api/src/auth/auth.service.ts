@@ -39,12 +39,14 @@ export class AuthService {
     }
 
     const passwordHash = await hash(input.password, 12);
+    const role = this.resolveRole(input.email);
     const owner = await this.prisma.owner.create({
       data: {
         email: input.email,
         passwordHash,
         displayName: input.displayName,
-        handle: input.handle
+        handle: input.handle,
+        role
       },
       select: publicOwnerSelect
     });
@@ -69,6 +71,15 @@ export class AuthService {
     const passwordMatches = await compare(input.password, owner.passwordHash);
     if (!passwordMatches) {
       throw new UnauthorizedException("Invalid email or password");
+    }
+
+    const expectedRole = this.resolveRole(owner.email);
+    if (owner.role !== expectedRole) {
+      await this.prisma.owner.update({
+        where: { id: owner.id },
+        data: { role: expectedRole }
+      });
+      owner.role = expectedRole;
     }
 
     const sessionToken = await this.createSession(owner.id);
@@ -119,6 +130,12 @@ export class AuthService {
       sameSite: "lax",
       path: "/"
     });
+  }
+
+  private resolveRole(email: string): "ADMIN" | "OWNER" {
+    const adminEmails = this.config.get<string>("ADMIN_EMAILS") ?? "";
+    const list = adminEmails.split(",").map((e) => e.trim()).filter(Boolean);
+    return list.includes(email) ? "ADMIN" : "OWNER";
   }
 
   private async createSession(ownerId: string) {

@@ -235,4 +235,3 @@ ALTER TABLE `ShareFeaturedModong` ADD CONSTRAINT `ShareFeaturedModong_shareId_fk
 
 -- AddForeignKey
 ALTER TABLE `ShareFeaturedModong` ADD CONSTRAINT `ShareFeaturedModong_modongId_fkey` FOREIGN KEY (`modongId`) REFERENCES `Modong`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-

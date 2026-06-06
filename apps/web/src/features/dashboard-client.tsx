@@ -634,7 +634,7 @@ function LandingPage({
         <div className="flex min-w-0 flex-col justify-between gap-8">
           <div>
             <div className="flex items-center gap-4">
-              <div className="grid h-20 w-20 flex-none place-items-center rounded-lg border border-border bg-white p-2 shadow-sm">
+              <div className="grid h-24 w-24 flex-none place-items-center rounded-lg border border-border bg-white p-2.5 shadow-sm">
                 <img
                   alt="Dongmodel"
                   className="h-full w-full object-contain"
@@ -645,7 +645,7 @@ function LandingPage({
                 <p className="text-sm font-black leading-tight text-primary">
                   Dongmodel
                 </p>
-                <p className="text-2xl font-black leading-tight">โมดอง</p>
+                <p className="text-3xl font-black leading-tight">โมดอง</p>
                 <p className="mt-1 text-xs font-semibold text-muted-foreground">
                   สะสมกันดั้มแบบมีระบบ
                 </p>

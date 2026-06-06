@@ -119,6 +119,59 @@ const emptyForm: FormState = {
   password: ""
 };
 
+const landingFeatures: Array<{
+  title: string;
+  description: string;
+  imageAlt: string;
+  imagePosition: string;
+  imageSrc: string;
+  Icon: LucideIcon;
+}> = [
+  {
+    title: "ลงทะเบียนโมดองที่มี",
+    description:
+      "บันทึกชื่อ สถานะ ประเภท ปีที่ได้มา แหล่งที่มา ราคา และรูปหลักของแต่ละชิ้นแบบหนึ่งรายการต่อหนึ่งของจริง",
+    imageAlt: "โมเดลหุ่นประกอบวางบนโต๊ะพร้อมบัตรจดรายการและถาดอะไหล่",
+    imagePosition: "center 12%",
+    imageSrc: "/landing/feature-modong.png",
+    Icon: Package2
+  },
+  {
+    title: "ตามของที่ยังหาอยู่",
+    description:
+      "แยก Wanted Items ออกจากของที่มีแล้ว ติดสถานะกำลังงมเข็ม เจอแล้ว หรือพักไว้ พร้อมรูปอ้างอิง",
+    imageAlt: "ชุดรูปอ้างอิงโมเดลและแว่นขยายสำหรับรายการของที่ตามหา",
+    imagePosition: "center 50%",
+    imageSrc: "/landing/feature-wanted.png",
+    Icon: Crosshair
+  },
+  {
+    title: "จัดกลุ่มและรายการตามหา",
+    description:
+      "รวมโมดองเป็นกลุ่ม และจัดของที่ตามหาเป็นรายการ เพื่อดูภาพรวมของธีมหรือโปรเจกต์สะสมแต่ละชุด",
+    imageAlt: "ถาดอะไหล่โมเดลและกล่องจัดเก็บที่แบ่งหมวดหมู่เป็นระเบียบ",
+    imagePosition: "center 50%",
+    imageSrc: "/landing/feature-organize.png",
+    Icon: FolderOpen
+  },
+  {
+    title: "แชร์เฉพาะที่อยากโชว์",
+    description:
+      "สร้าง share card หรือ public gallery ได้โดยไม่เปิดราคา โน้ตส่วนตัว หรือข้อมูลที่ควรอยู่หลัง session",
+    imageAlt: "โมเดลที่จัดแสงถ่ายรูปพร้อมหน้าจอแชร์แบบไม่เห็นข้อมูลส่วนตัว",
+    imagePosition: "center 38%",
+    imageSrc: "/landing/feature-share.png",
+    Icon: ShieldCheck
+  }
+];
+
+const landingSteps = [
+  "Login หรือ Register เจ้าของกองสะสม",
+  "เพิ่มโมดองหรือของที่ตามหา พร้อมสถานะและรูป",
+  "ดูภาพรวมจำนวน สถานะ และมูลค่าส่วนตัวใน dashboard",
+  "เลือกแชร์เฉพาะรายการหรือ gallery ที่พร้อมให้คนอื่นเห็น"
+];
+
 export function DashboardClient({
   section = "overview"
 }: {
@@ -352,43 +405,15 @@ export function DashboardClient({
   // Not authenticated
   if (!owner) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-background p-4">
-        <div className="w-full max-w-[400px]">
-          <div className="mb-8 flex items-center gap-3">
-            <img
-              alt="Dongmodel"
-              className="h-12 w-12 rounded-lg object-contain"
-              src="/brand/logo.png"
-            />
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground">
-                Dongmodel
-              </p>
-              <h1 className="text-2xl font-black">โมดอง</h1>
-            </div>
-          </div>
-          <AuthPanel
-            authMode={authMode}
-            busy={busy}
-            form={form}
-            onFormChange={setForm}
-            onModeChange={setAuthMode}
-            onSubmit={submitAuth}
-          />
-          {error ? (
-            <div
-              aria-live="assertive"
-              className="animate-fade-in mt-3 rounded-lg border border-primary bg-white p-4 text-sm font-semibold text-primary"
-              role="alert"
-            >
-              {error}
-            </div>
-          ) : null}
-          <p className="mt-8 text-center text-sm font-bold text-accent">
-            {publicPhrases.wantedShare}
-          </p>
-        </div>
-      </main>
+      <LandingPage
+        authMode={authMode}
+        busy={busy}
+        error={error}
+        form={form}
+        onFormChange={setForm}
+        onModeChange={setAuthMode}
+        onSubmit={submitAuth}
+      />
     );
   }
 
@@ -583,6 +608,161 @@ export function DashboardClient({
         </main>
       </div>
     </div>
+  );
+}
+
+function LandingPage({
+  authMode,
+  busy,
+  error,
+  form,
+  onFormChange,
+  onModeChange,
+  onSubmit
+}: {
+  authMode: AuthMode;
+  busy: boolean;
+  error: string | null;
+  form: FormState;
+  onFormChange: (form: FormState) => void;
+  onModeChange: (mode: AuthMode) => void;
+  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <main className="min-h-screen bg-background">
+      <section className="mx-auto grid min-h-screen w-full max-w-7xl gap-8 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:px-8 lg:py-10">
+        <div className="flex min-w-0 flex-col justify-between gap-8">
+          <div>
+            <div className="flex items-center gap-4">
+              <div className="grid h-20 w-20 flex-none place-items-center rounded-lg border border-border bg-white p-2 shadow-sm">
+                <img
+                  alt="Dongmodel"
+                  className="h-full w-full object-contain"
+                  src="/brand/logo.png"
+                />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-black leading-tight text-primary">
+                  Dongmodel
+                </p>
+                <p className="text-2xl font-black leading-tight">โมดอง</p>
+                <p className="mt-1 text-xs font-semibold text-muted-foreground">
+                  สะสมกันดั้มแบบมีระบบ
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-10 max-w-3xl">
+              <p className="text-sm font-black text-primary">
+                personal collection ledger
+              </p>
+              <h1 className="mt-3 text-4xl font-black leading-tight">
+                ระบบจดกองโมดองที่รู้ว่าอะไรอยู่ตรงไหน
+              </h1>
+              <p className="mt-5 max-w-2xl text-base font-semibold leading-7 text-muted-foreground">
+                เก็บของที่มี ติดตามของที่กำลังหา ดูภาพรวมมูลค่าส่วนตัว
+                และแชร์เฉพาะชิ้นที่อยากให้คนอื่นเห็น โดยไม่หลุดราคาและโน้ตส่วนตัว
+              </p>
+            </div>
+
+            <figure className="mt-8 overflow-hidden rounded-lg border border-border bg-white shadow-sm">
+              <img
+                alt="โต๊ะและชั้นสะสมโมเดลส่วนตัวพร้อมสมุดจดรายการ"
+                className="aspect-[16/9] w-full object-cover"
+                src="/landing/collector-workspace.png"
+              />
+            </figure>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {landingFeatures.map((feature) => (
+              <article
+                className="overflow-hidden rounded-lg border border-border bg-white shadow-sm"
+                key={feature.title}
+              >
+                <img
+                  alt={feature.imageAlt}
+                  className="h-40 w-full object-cover"
+                  src={feature.imageSrc}
+                  style={{ objectPosition: feature.imagePosition }}
+                />
+                <div className="p-5">
+                  <div className="mb-4 grid h-10 w-10 place-items-center rounded-md bg-muted text-foreground">
+                    <feature.Icon aria-hidden className="h-5 w-5" />
+                  </div>
+                  <h2 className="text-lg font-black">{feature.title}</h2>
+                  <p className="mt-2 text-sm font-semibold leading-6 text-muted-foreground">
+                    {feature.description}
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <article className="grid overflow-hidden rounded-lg border border-border bg-white shadow-sm md:grid-cols-[minmax(0,1.15fr)_minmax(240px,0.85fr)]">
+            <img
+              alt="ชั้นเก็บกล่องโมเดลที่จัดเรียงเป็นหมวดหมู่ในห้องเก็บของส่วนตัว"
+              className="aspect-[16/10] h-full w-full object-cover"
+              src="/landing/model-kit-storage.png"
+            />
+            <div className="p-5">
+              <p className="text-xs font-black text-primary">
+                organized storage
+              </p>
+              <h2 className="mt-2 text-lg font-black">
+                กล่องเยอะแค่ไหนก็ไม่ต้องจำด้วยหัวอย่างเดียว
+              </h2>
+              <p className="mt-3 text-sm font-semibold leading-6 text-muted-foreground">
+                เก็บตำแหน่ง ประเภท และกลุ่มของแต่ละรายการไว้ในระบบ
+                เพื่อให้ชั้นวางจริงยังเป็นระเบียบ และตอนจะหยิบก็รู้ว่าต้องไปตรงไหน
+              </p>
+            </div>
+          </article>
+        </div>
+
+        <aside className="flex flex-col gap-4 lg:pt-20">
+          <div className="rounded-lg border border-border bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-black">ทำงานอย่างไร</h2>
+            <ol className="mt-4 grid gap-3">
+              {landingSteps.map((step, index) => (
+                <li className="flex gap-3" key={step}>
+                  <span className="grid h-7 w-7 flex-none place-items-center rounded-md bg-foreground text-xs font-black text-white">
+                    {index + 1}
+                  </span>
+                  <span className="pt-1 text-sm font-semibold leading-6 text-muted-foreground">
+                    {step}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          <div>
+            <AuthPanel
+              authMode={authMode}
+              busy={busy}
+              form={form}
+              onFormChange={onFormChange}
+              onModeChange={onModeChange}
+              onSubmit={onSubmit}
+            />
+            {error ? (
+              <div
+                aria-live="assertive"
+                className="animate-fade-in mt-3 rounded-lg border border-primary bg-white p-4 text-sm font-semibold text-primary"
+                role="alert"
+              >
+                {error}
+              </div>
+            ) : null}
+          </div>
+
+          <p className="rounded-lg border border-border bg-white p-4 text-sm font-bold leading-6 text-accent shadow-sm">
+            {publicPhrases.wantedShare}
+          </p>
+        </aside>
+      </section>
+    </main>
   );
 }
 

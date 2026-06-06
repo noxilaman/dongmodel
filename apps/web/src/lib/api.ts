@@ -364,6 +364,22 @@ export async function getOwnerGallery(handle: string): Promise<GalleryResponse> 
   return requestJson<GalleryResponse>(`/owners/${handle}/gallery`);
 }
 
+// --- Admin users ---
+
+export type AdminUser = {
+  id: string;
+  email: string;
+  displayName: string;
+  handle: string;
+  role: string;
+  createdAt: string;
+};
+
+export async function listAdminUsers(): Promise<AdminUser[]> {
+  const result = await requestJson<{ items: AdminUser[] }>("/admin/users");
+  return result.items;
+}
+
 // --- Community feed ---
 
 export type CommunityItem = {

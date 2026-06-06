@@ -52,4 +52,10 @@ export class AdminController {
   async deleteKind(@Param("id") id: string) {
     return this.admin.deleteKind(id);
   }
+
+  @UseGuards(AdminGuard)
+  @Get("users")
+  async listUsers() {
+    return { items: await this.admin.listUsers() };
+  }
 }

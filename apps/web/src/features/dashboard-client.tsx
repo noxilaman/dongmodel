@@ -62,6 +62,7 @@ import {
   type WantedFormState
 } from "../lib/wanted-form";
 import { AdminKindsPanel } from "./admin-kinds";
+import { AdminUsersPanel } from "./admin-users";
 import { CollectibleKindSelector } from "./collectible-kind-selector";
 import { ModongGroupsPanel } from "./modong-groups";
 import { ModongListPanel } from "./modong-list";
@@ -890,7 +891,12 @@ function SummaryDashboard({
   }
 
   if (owner?.role === "ADMIN") {
-    return <AdminKindsPanel />;
+    return (
+      <div className="grid gap-4">
+        <AdminUsersPanel />
+        <AdminKindsPanel />
+      </div>
+    );
   }
 
   return (

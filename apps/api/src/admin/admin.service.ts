@@ -52,6 +52,28 @@ export class AdminService {
     await this.prisma.collectibleKind.delete({ where: { id } });
     return { ok: true };
   }
+
+  async listUsers() {
+    const owners = await this.prisma.owner.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        handle: true,
+        role: true,
+        createdAt: true
+      }
+    });
+    return owners.map((o) => ({
+      id: o.id,
+      email: o.email,
+      displayName: o.displayName,
+      handle: o.handle,
+      role: o.role,
+      createdAt: o.createdAt.toISOString()
+    }));
+  }
 }
 
 type KindRecord = {
